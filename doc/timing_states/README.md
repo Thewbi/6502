@@ -28,14 +28,50 @@ the chip so it is ready to execute the instruction that is currently stored in t
 register.
 
 The name timing generator is misleading in my opinion since the timing generator does not 
-generate a clock signal! It also has nothing to do with a wall clock or any clock! The only
-thing that it does it produce an output signal that makes the random control logic perform
-the correct steps.
+generate a clock signal! There is a clock in the 6502 which drives the entire system but that
+clock has nothing to do with the timing generator. The timing generator also has nothing to do 
+with a wall clock or any clock! The only thing that it does it produce an output signal that 
+makes the random control logic perform the correct steps.
 
 The state machine inside the timing generator is executed for one instruction at a time. There
 is no pipelining. When the state machine arrives at one of the end states, that means that
 the current instruction has been executed and it is time to execute the next instruction.
 In this case the statemachine will return to the start state and fetch the next instruction.
+
+## Normal, Linear instructions
+
+Sources:
+[1] https://www.cs.columbia.edu/~sedwards/classes/2013/4840/reports/6502.pdf
+
+For normal instructions, the timing generator traverses a state machine that is very linear.
+
+It uses the amount of max cycles from the predecoder to know when to return to state T0.
+It needs the max cycle information as this information differs from instruction to instruction.
+The longest instructions take seven cycles.
+
+As such there is a transition from all the states back to T0.
+T0 and T1 are always executed for every instruction.
+
+There is one branch in the state machine which is taken when there is no page crossing.
+
+The state machine for normal instructions is displayed in [1] and reproduced here:
+In order to not clutter the diagram, the return transitions that go back to T0 are not drawn.
+
+```
+----------------------------> T0 <-----
+|                             |       |
+|                             ↓       |
+|                             T1      |
+|                             |       |
+|                             ↓       |
+|                             T2      |
+|                             ...     |
+|                             ↓       |
+|                             T??? ----
+|                             |
+|                             ↓
+----------------------------- T???
+```
 
 ## Branch Instructions
 
@@ -56,17 +92,17 @@ crossing.
 The state machine for branch instructions is displayed in [1] and reproduced here:
 
 ```
-    branch taken with pagecross
-    ----------------------------> T0
-    |                             |
-    |                             ↓
-    |  -------------------------> T1 <------
-    |  | branch taken w/o         |        | branch not taken
-    |  | pagecross                ↓        |
-    |  |                          T2_b -----
-    |  |                          |
-    |  |                          ↓
-    ---+------------------------- T3_b                    
+branch taken with pagecross
+----------------------------> T0
+|                             |
+|                             ↓
+|  -------------------------> T1 <------
+|  | branch taken w/o         |        | branch not taken
+|  | pagecross                ↓        |
+|  |                          T2_b -----
+|  |                          |
+|  |                          ↓
+---+------------------------- T3_b                    
 ```
 
 The reason why branch instructions skip T0 in case 1 and case 2 is that the microcode for the branch
