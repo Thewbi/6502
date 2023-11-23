@@ -1,31 +1,62 @@
 # Timing States
 
+## Sources
+
+[1] http://forum.6502.org/viewtopic.php?f=8&t=4625
+[2] https://www.witwright.com/DonPub/DSH_6502_ComputerArch.pdf
+[3] https://www.nesdev.org/wiki/6502_cycle_times
+
 ## Timing Generator
 
 The amount of cycles it takes to execute an instruction on the 6502 chip at most, i.e. in
 the worst case is encoded in the 6502 instruction itself.
 
-The 6502 has a component called the **predecoder**. The predecor when given the next instruction 
-in the instruction register will determine the amount of cycles that the instruction takes by
-decoding it from the instruction.
+The 6502 has a component called the **predecode logic**. The predeco logic, when given the 
+next instruction from the predecode register, will determine the amount of cycles that the 
+instruction takes. (How does it know that?). This information is called **TZPRE** in Dr.
+Donald Hanson's block diagram according to [1]. TZPRE = "TZERO PREDECODER".
+Meaning that TZPRE is one of the states of the timing generator, T0, T1, T2, T3, T4 and T5.
+If the timing generator hits that state in the state machine, it is supposed to return to
+state T0 because then the instruction execution of the instruction is done! This is required
+since especially the state machine for normal instructions is applied to all normal instructions.
+Normal instructions exists in various lengths. Some take 3, 4, 5, 6 or 7 steps. The 
+state machine has to know when the normal instruction is done.
+
+The original table stored inside the predecode logic is not known to me, but I think it is
+possible to use one of the tables that describe how many cycles each opcode takes to execute.
+One very usable table is [3]. It has one mnemonic per row and columns for all addressing modes.
+The cells contains the cycle count and a + means that there is an extra cycle when page crossing
+takes place. Using this table, the predecode logic TZPRE could be implemented in an emulator.
 
 It will pass this information on to the **timing generator** component. The timing generator takes
-the amount of cycles and the instruction in the instruction register and it keeps traversing
-a internal state machine. This state machine takes different paths based on the instruction
+the amount of cycles (or the state that is the terminating state) and the instruction in the instruction 
+register and it keeps traversing a internal state machine. This state machine takes different paths based on the instruction
 it sees in the instruction register. The state machine inside the timig generator knows three
 groups of instructions (Normal, branch and read-modify-write instructions). The three groups
 can be used to describe the timing generator more easily and once only for each group.
 
 As the timing generator traverses through it's internal state machine it creates output signals.
-Basically, the current state that the machine is in, is it's output signal. (This is the
-definition of a Moore state machine, Mealy also takes the intput into consideration). The current
-state is the output of the timing generator and the input into the **random control logic**.
+Basically, the current state that the machine is in, is it's output signal. 
+(This is the definition of a Moore state machine, Mealy also takes the intput into consideration). 
+The current state of the state machine is then combined into a 6 bit information. The 6 bit are
+a one hot combination of the states T0, T1, T2, T3, T4 and T5 of the state machine. The machine
+is only in one of those states at any point in time, this is the reason why the encoding is one hot.
+
+This 6 bit information is the output of the timing generator and one of the inputs into the 
+**decode ROM (PLA)**. The decode ROM (PLA) is a large table. It has 130 rows, called lines and
+each line is 21 bits wide. each line checks the six bits from the time generator and other bits
+from the instruction register, i.e. the opcode. When a line is activated by the input bits, then 
+the decode ROM (PLA) will output a 1, if no line activates it will output a 0. The output of the
+decode ROM (PLA) is one input into the **random control logic**.
 
 The random control logic takes the current timing state and the instruction from the instruction
-register and looks up signals for all the control lines inside the 6502 chip. The signals for
-all the control lines are stored inside a fixed ROM-chip. The control lines will the configure
+register and produces signals for all the control lines inside the 6502 chip. The signals for
+all the control lines are stored inside a fixed ROM-chip. The control lines will then configure
 the chip so it is ready to execute the instruction that is currently stored in the instruction
 register.
+
+The random control logic also feeds back some data into the timing generator. I have not yet
+figured out what that information does exactly.
 
 The name timing generator is misleading in my opinion since the timing generator does not 
 generate a clock signal! There is a clock in the 6502 which drives the entire system but that
@@ -47,7 +78,16 @@ For normal instructions, the timing generator traverses a state machine that is 
 
 It uses the amount of max cycles from the predecoder to know when to return to state T0.
 It needs the max cycle information as this information differs from instruction to instruction.
-The longest instructions take seven cycles.
+The longest instructions take seven cycles. The smallest instructions take two cycles.
+One byte instructions even waste the T1 cycle because a second byte is loaded in T1 but 
+completely ignored. T0 and T1 are always executed.
+
+Also interesting: for one byte instructions, the PC is **not** incremented during T0! 
+The predecode-logic makes sure that the PC remains how it was after retrieveing a one 
+byte instruction. During T1, the same byte is then read again and ignored. In T1, the
+PC is finally incremented and the next real instruction is read. For instructions that
+are not one byte, the second byte is a parameter or something and therefore it is ok
+to increment PC and read another byte. For one byte instructions it is not ok.
 
 As such there is a transition from all the states back to T0.
 T0 and T1 are always executed for every instruction.
@@ -62,14 +102,14 @@ In order to not clutter the diagram, the return transitions that go back to T0 a
 |                             |       |
 |                             ↓       |
 |                             T1      |
-|                             |       |
-|                             ↓       |
+|                             |       | (amount of cycles minus one) used up 
+|                             ↓       | and no page crossing
 |                             T2      |
 |                             ...     |
 |                             ↓       |
-|                             T??? ----
-|                             |
-|                             ↓
+|                             T??? ---- 
+| amount of cycles used up    |
+| and page crossing           ↓
 ----------------------------- T???
 ```
 
@@ -131,3 +171,15 @@ T0  PC + 2 + off    next opcode      fetch for branch taken, other page (with ca
 
 (T3/T4 or just T4 are left away if branch not taken or no page crossing).
 ```
+
+## Output of the timing logic
+
+Source:
+[1] https://www.nesdev.org/wiki/Visual6502wiki/6502_Timing_States
+[2] https://www.pagetable.com/?p=39
+
+The timing logic will output 6 bits to the predecode logic (PAL). These six bits
+are the timing states T0, T+, T2, T3, T4, and T5 whereas only one of those bits
+is set to a 1 since the state machine is only in one of those states at any point.
+
+In the document [2] these states are called T6 T5 T4 T3 T2 T1.
