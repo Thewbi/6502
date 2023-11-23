@@ -2,9 +2,10 @@
 
 ## Sources
 
-[1] http://forum.6502.org/viewtopic.php?f=8&t=4625
-[2] https://www.witwright.com/DonPub/DSH_6502_ComputerArch.pdf
+[1] http://forum.6502.org/viewtopic.php?f=8&t=4625 \
+[2] https://www.witwright.com/DonPub/DSH_6502_ComputerArch.pdf \
 [3] https://www.nesdev.org/wiki/6502_cycle_times
+[4] http://www.6502.org/tutorials/6502opcodes.html
 
 ## Timing Generator
 
@@ -27,6 +28,7 @@ possible to use one of the tables that describe how many cycles each opcode take
 One very usable table is [3]. It has one mnemonic per row and columns for all addressing modes.
 The cells contains the cycle count and a + means that there is an extra cycle when page crossing
 takes place. Using this table, the predecode logic TZPRE could be implemented in an emulator.
+Another listing is [4] it lists the hexadecimal representation of the command.
 
 It will pass this information on to the **timing generator** component. The timing generator takes
 the amount of cycles (or the state that is the terminating state) and the instruction in the instruction 
@@ -175,7 +177,7 @@ T0  PC + 2 + off    next opcode      fetch for branch taken, other page (with ca
 ## Output of the timing logic
 
 Source:
-[1] https://www.nesdev.org/wiki/Visual6502wiki/6502_Timing_States
+[1] https://www.nesdev.org/wiki/Visual6502wiki/6502_Timing_States \
 [2] https://www.pagetable.com/?p=39
 
 The timing logic will output 6 bits to the predecode logic (PAL). These six bits

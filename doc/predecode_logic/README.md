@@ -2,7 +2,7 @@
 
 ## Sources
 
-[1] https://retrocomputing.stackexchange.com/questions/4880/6502-what-does-the-predecode-register-exactly-do
+[1] https://retrocomputing.stackexchange.com/questions/4880/6502-what-does-the-predecode-register-exactly-do \
 [2] https://www.pagetable.com/?p=39
 
 ## Purpose
