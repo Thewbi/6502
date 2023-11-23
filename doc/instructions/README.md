@@ -8,7 +8,7 @@
 ## Format
 AAABBBCC
 
-AAA---CC   -- is used to identify the type of opcode
+AAA---CC   -- is used to identify the type of opcode \
    BBB     -- is used to encode the addressing mode (see table below)
 
 | BBB | Addressing Mode |
@@ -60,5 +60,3 @@ Affects Flags: N Z
 |Indirect,Y  | AND ($44),Y | $31 | 001 | 100 | 01  | 2   | 5+  |
 
 + add 1 cycle if page boundary crossed
-
-$29 = 001 010 01 aaa

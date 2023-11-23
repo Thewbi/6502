@@ -8,10 +8,8 @@ ENTITY CPU IS
         opcode : IN STD_LOGIC_VECTOR(7 DOWNTO 0);
         tcstate : IN STD_LOGIC_VECTOR(5 DOWNTO 0);
         databus : IN STD_LOGIC_VECTOR(7 DOWNTO 0);
-        ACR_out, W_R, BRC : OUT STD_LOGIC; --JB0510 added BRC as CPU
-        output
-        ABL_out, ABH_out, DOR, X_out, Y_out, ACC_out, P_out : OUT
-        STD_LOGIC_VECTOR(7 DOWNTO 0)
+        ACR_out, W_R, BRC : OUT STD_LOGIC; --JB0510 added BRC as CPU output
+        ABL_out, ABH_out, DOR, X_out, Y_out, ACC_out, P_out : OUT STD_LOGIC_VECTOR(7 DOWNTO 0)
     );
 END CPU;
 
@@ -29,11 +27,9 @@ ARCHITECTURE rtl OF CPU IS
 BEGIN
     ACR_out <= ACR;
     --ALU Part: Combinational Logic
-    PROCESS (SUMS, ORS, ANDS, EORS, SRS, AI, BI, I_ADDC, Mask_shortcut,
-        opcode, P, ACR)
+    PROCESS (SUMS, ORS, ANDS, EORS, SRS, AI, BI, I_ADDC, Mask_shortcut, opcode, P, ACR)
         VARIABLE temp : unsigned(8 DOWNTO 0);
         -- variable ACR : std_logic;
-
     BEGIN
         IF SUMS = '1' THEN
             temp := ('0' & AI) + ('0' & BI) + ("0" & I_ADDC);
@@ -70,11 +66,11 @@ BEGIN
         END IF;
     END PROCESS;
     --=====================================================================
+
     --=====================================================================
     PROCESS (clk, reset)
     BEGIN
-        IF rising_edge(clk) THEN --JB0513 reset if statement is put into
-            rising_edge(clk)
+        IF rising_edge(clk) THEN --JB0513 reset if statement is put into rising_edge(clk)
             IF reset = '1' THEN
                 PC <= x"0001";
                 ABL <= x"00";
@@ -133,9 +129,7 @@ BEGIN
                     END IF;
                     --Address Mode: Zero page, X; aaa: don't care; cc: don't care.
                     --Timing T2
-                    IF (opcode(4 DOWNTO 2) = "101" AND tcstate(2) = '0' AND
-                        (NOT((opcode(7 DOWNTO 5) = "100" OR opcode(7 DOWNTO 5) = "101") AND opcode(1
-                        DOWNTO 0) = "10"))) THEN
+                    IF (opcode(4 DOWNTO 2) = "101" AND tcstate(2) = '0' AND (NOT((opcode(7 DOWNTO 5) = "100" OR opcode(7 DOWNTO 5) = "101") AND opcode(1 DOWNTO 0) = "10"))) THEN
                         PC <= PC;
                         ABL <= Databus;
                         ABH <= x"00";
@@ -152,8 +146,7 @@ BEGIN
                     END IF;
                     --Address Mode: Absolute X; aaa: don't care; cc: don't care.
                     --Timing T2
-                    IF (opcode(4 DOWNTO 2) = "111" AND tcstate(2) = '0' AND
-                        (NOT(opcode(7 DOWNTO 5) = "101" AND opcode(1 DOWNTO 0) = "10"))) THEN
+                    IF (opcode(4 DOWNTO 2) = "111" AND tcstate(2) = '0' AND (NOT(opcode(7 DOWNTO 5) = "101" AND opcode(1 DOWNTO 0) = "10"))) THEN
                         PC <= PC + 1;
                         ABL <= STD_LOGIC_VECTOR(PC(7 DOWNTO 0));
                         ABH <= STD_LOGIC_VECTOR(PC(15 DOWNTO 8));
@@ -174,8 +167,7 @@ BEGIN
                         Sums <= '0';
                     END IF;
                     --page crossing
-                    IF (opcode(4 DOWNTO 2) = "111" AND tcstate(3) = '0' AND
-                        ACR = '1') THEN
+                    IF (opcode(4 DOWNTO 2) = "111" AND tcstate(3) = '0' AND ACR = '1') THEN
                         PC <= PC;
                         ABL <= STD_LOGIC_VECTOR(ADD);
                         ABH <= x"00";
@@ -199,7 +191,6 @@ BEGIN
                         PC <= PC;
                         ABL <= Databus;
                         ABH <= x"00";
-
                     END IF;
                 END IF; --exclude the cc=00 part to avoid overlapping
                 --======================bbb is the only concern ends=====================
@@ -219,8 +210,7 @@ BEGIN
                 END IF;
                 --Timing T3
                 --no page crossing
-                IF (opcode(4 DOWNTO 2) = "110" AND opcode(1 DOWNTO 0) = "01" AND
-                    tcstate(3) = '0' AND ACR = '0') THEN
+                IF (opcode(4 DOWNTO 2) = "110" AND opcode(1 DOWNTO 0) = "01" AND tcstate(3) = '0' AND ACR = '0') THEN
                     PC <= PC;
                     ABL <= STD_LOGIC_VECTOR(ADD);
                     ABH <= Databus;
@@ -244,11 +234,9 @@ BEGIN
                     ABL <= ABL;
                     ABH <= STD_LOGIC_VECTOR(ADD);
                     I_ADDC <= '0';
-
                     Sums <= '0';
                 END IF;
-                --Address Mode: (Zero page, X)/Indirect, X; aaa: don't care; cc:
-                01
+                --Address Mode: (Zero page, X)/Indirect, X; aaa: don't care; cc: 01
                 --T2
                 IF (opcode(4 DOWNTO 2) = "000" AND opcode(1 DOWNTO 0) = "01" AND tcstate(2) = '0') THEN
                     PC <= PC;
@@ -287,8 +275,7 @@ BEGIN
                     ABL <= STD_LOGIC_VECTOR(ADD);
                     Sums <= '0';
                 END IF;
-                --Address Mode: (Zero page), Y/Indirect, Y; aaa: don't care; cc:
-                01
+                --Address Mode: (Zero page), Y/Indirect, Y; aaa: don't care; cc:01
                 --T2
                 IF (opcode(4 DOWNTO 2) = "100" AND opcode(1 DOWNTO 0) = "01" AND tcstate(2) = '0') THEN
                     PC <= PC;
@@ -341,7 +328,7 @@ BEGIN
                     Sums <= '0';
                 END IF;
                 --======================bbb and cc=01 are concerned ends ==============================
-                
+
                 --======================aaa and cc=01 are concerned ===================================
                 --Instruction: LDA; aaa: 101; bbb: don't care; cc: 01
                 --T0
@@ -424,8 +411,7 @@ BEGIN
                 END IF;
                 --Instruction: EOR; aaa: 010; bbb: don't care; cc: 01
                 --T0
-                IF (opcode(7 DOWNTO 5) = "010" AND opcode(1 DOWNTO 0) = "01" AND
-                    tcstate(0) = '0') THEN
+                IF (opcode(7 DOWNTO 5) = "010" AND opcode(1 DOWNTO 0) = "01" AND tcstate(0) = '0') THEN
                     PC <= PC + 1;
                     ABL <= STD_LOGIC_VECTOR(PC(7 DOWNTO 0));
                     ABH <= STD_LOGIC_VECTOR(PC(15 DOWNTO 8));
@@ -434,8 +420,7 @@ BEGIN
                     EORS <= '1';
                     SUMS <= '0';
                 END IF;
-                IF (opcode(7 DOWNTO 5) = "010" AND opcode(1 DOWNTO 0) = "01" AND
-                    tcstate(1) = '0') THEN
+                IF (opcode(7 DOWNTO 5) = "010" AND opcode(1 DOWNTO 0) = "01" AND tcstate(1) = '0') THEN
                     PC <= PC + 1;
                     ABL <= STD_LOGIC_VECTOR(PC(7 DOWNTO 0));
                     ABH <= STD_LOGIC_VECTOR(PC(15 DOWNTO 8));
@@ -454,8 +439,7 @@ BEGIN
                 END IF;
                 --Instruction: ADC; aaa: 011; bbb: don't care; cc: 01
                 --T0
-                IF (opcode(7 DOWNTO 5) = "011" AND opcode(1 DOWNTO 0) = "01" AND
-                    tcstate(0) = '0') THEN
+                IF (opcode(7 DOWNTO 5) = "011" AND opcode(1 DOWNTO 0) = "01" AND tcstate(0) = '0') THEN
                     PC <= PC + 1;
                     ABL <= STD_LOGIC_VECTOR(PC(7 DOWNTO 0));
                     ABH <= STD_LOGIC_VECTOR(PC(15 DOWNTO 8));
@@ -465,8 +449,7 @@ BEGIN
                     I_ADDC <= P(0);
                 END IF;
                 --T1
-                IF (opcode(7 DOWNTO 5) = "011" AND opcode(1 DOWNTO 0) = "01" AND
-                    tcstate(1) = '0') THEN
+                IF (opcode(7 DOWNTO 5) = "011" AND opcode(1 DOWNTO 0) = "01" AND tcstate(1) = '0') THEN
                     PC <= PC + 1;
                     ABL <= STD_LOGIC_VECTOR(PC(7 DOWNTO 0));
                     ABH <= STD_LOGIC_VECTOR(PC(15 DOWNTO 8));
@@ -491,8 +474,7 @@ BEGIN
                 END IF;
                 --Instruction: CMP; aaa: 110; bbb: don't care; cc: 01
                 --T0
-                IF (opcode(7 DOWNTO 5) = "110" AND opcode(1 DOWNTO 0) = "01" AND
-                    tcstate(0) = '0') THEN
+                IF (opcode(7 DOWNTO 5) = "110" AND opcode(1 DOWNTO 0) = "01" AND tcstate(0) = '0') THEN
                     PC <= PC + 1;
                     ABL <= STD_LOGIC_VECTOR(PC(7 DOWNTO 0));
                     ABH <= STD_LOGIC_VECTOR(PC(15 DOWNTO 8));
@@ -502,8 +484,7 @@ BEGIN
                     SUMS <= '1';
                 END IF;
                 --T1
-                IF (opcode(7 DOWNTO 5) = "110" AND opcode(1 DOWNTO 0) = "01" AND
-                    tcstate(1) = '0') THEN
+                IF (opcode(7 DOWNTO 5) = "110" AND opcode(1 DOWNTO 0) = "01" AND tcstate(1) = '0') THEN
                     PC <= PC + 1;
                     ABL <= STD_LOGIC_VECTOR(PC(7 DOWNTO 0));
                     ABH <= STD_LOGIC_VECTOR(PC(15 DOWNTO 8));
@@ -573,34 +554,26 @@ BEGIN
                 END IF;
                 --Last cycle, write value to memory
                 IF (opcode(7 DOWNTO 5) = "100" AND opcode(1 DOWNTO 0) = "01") THEN
-                    IF ((opcode(4 DOWNTO 2) = "000" AND tcstate(5) = '0') --(zero
-                        page, X)
-                        OR(opcode(4 DOWNTO 2) = "001" AND tcstate(2) = '0') --zero
-                        page
-                        OR(opcode(4 DOWNTO 2) = "011" AND tcstate(3) = '0') --
-                        absolute
-                        OR(opcode(4 DOWNTO 2) = "100" AND ((tcstate(4) = '0') OR
-                        (tcstate(5) = '0'))) --(zero page), Y
-                        OR(opcode(4 DOWNTO 2) = "101" AND tcstate(3) = '0') --zero
-                        page, X
-                        OR(opcode(4 DOWNTO 2) = "110" AND ((tcstate(3) = '0') OR
-                        (tcstate(4) = '0'))) --absolute, Y
-                        OR(opcode(4 DOWNTO 2) = "111" AND ((tcstate(3) = '0') OR
-                        (tcstate(4) = '0')))) --absolute, X
+                    IF ((opcode(4 DOWNTO 2) = "000" AND tcstate(5) = '0') --(zero page, X)
+                        OR(opcode(4 DOWNTO 2) = "001" AND tcstate(2) = '0') --zero page
+                        OR(opcode(4 DOWNTO 2) = "011" AND tcstate(3) = '0') -- absolute
+                        OR(opcode(4 DOWNTO 2) = "100" AND ((tcstate(4) = '0') OR (tcstate(5) = '0'))) --(zero page), Y
+                        OR(opcode(4 DOWNTO 2) = "101" AND tcstate(3) = '0') --zero page, X
+                        OR(opcode(4 DOWNTO 2) = "110" AND ((tcstate(3) = '0') OR (tcstate(4) = '0'))) --absolute, Y
+                        OR(opcode(4 DOWNTO 2) = "111" AND ((tcstate(3) = '0') OR (tcstate(4) = '0')))) --absolute, X
                         THEN
                         DOR <= STD_LOGIC_VECTOR(ACC);
                         W_R <= '0';
                     END IF;
                 END IF;
                 --======================aaa and cc=01 are concerned ends == == == == == == == == == == == == == == == =
-                
+
                 --======================cc=10 are concerned == == == == == == == == == == == == == == == == == == == == == =
                 --STX and LDX address mode special cases
                 --1) Address Mode: Zero page, X==> Zero page, Y; Instructions:
                 STX AND LDX
                 --Timing T2
-                IF (opcode(4 DOWNTO 2) = "101" AND tcstate(2) = '0' AND (((opcode(7 DOWNTO 5) = "100" OR opcode(7 DOWNTO 5) = "101") AND opcode(1 DOWNTO 0) = "10")))
-                    THEN
+                IF (opcode(4 DOWNTO 2) = "101" AND tcstate(2) = '0' AND (((opcode(7 DOWNTO 5) = "100" OR opcode(7 DOWNTO 5) = "101") AND opcode(1 DOWNTO 0) = "10"))) THEN
                     PC <= PC;
                     ABL <= Databus;
                     ABH <= x"00";
@@ -620,8 +593,7 @@ BEGIN
                 END IF;
                 --JB0511 To avoid conflict with Arthy's, avoid hex1>=8 and hex2=A.
                 IF opcode(1 DOWNTO 0) = "10" AND NOT(opcode(7) = '1' AND opcode(3 DOWNTO 2) = "10") THEN
-                    --For all the instructions in this section (cc=10), T0 and
-                    T1 has the same behaviors
+                    --For all the instructions in this section (cc=10), T0 and T1 has the same behaviors
                     --T0
                     IF tcstate(0) = '0' THEN
                         PC <= PC + 1;
@@ -658,8 +630,7 @@ BEGIN
                         PC <= PC;
                         ABH <= ABH;
                         ABL <= ABL;
-                        AI <= unsigned(Databus); --JB0511 correct? Why is W_R
-                        '0' WHILE Databus => DOR?
+                        AI <= unsigned(Databus); --JB0511 correct? Why is W_R '0' WHILE Databus => DOR?
                         BI <= unsigned(Databus);
                         DOR <= Databus;
                         SUMS <= '1';
@@ -796,8 +767,7 @@ BEGIN
                         AI <= x"ff";
                         I_ADDC <= '0';
                         DOR <= Databus;
-                        W_R <= '0'; --JB0510 W_R=0 signal should happen at the
-                        following cycle, NOT WHEN DOR IS loaded??
+                        W_R <= '0'; --JB0510 W_R=0 signal should happen at the following cycle, NOT WHEN DOR IS loaded??
                         SUMS <= '1';
                     END IF;
                     --SD2
@@ -806,8 +776,7 @@ BEGIN
                         ABH <= ABH;
                         ABL <= ABL;
                         DOR <= STD_LOGIC_VECTOR(ADD);
-                        W_R <= '0'; --JB0510 W_R=0 signal should happen at the
-                        following cycle, NOT WHEN DOR IS loaded??
+                        W_R <= '0'; --JB0510 W_R=0 signal should happen at the following cycle, NOT WHEN DOR IS loaded??
                         I_ADDC <= '0';
                         SUMS <= '0';
                         IF ADD(7) = '1' THEN
@@ -824,24 +793,19 @@ BEGIN
                     --Instruction: STX; aaa: 100; bbb: don't care; cc: 10
                     --Last cycle, write value to memory
                     IF opcode(7 DOWNTO 5) = "100" THEN
-                        IF ((opcode(4 DOWNTO 2) = "001" AND tcstate(2) = '0') --
-                            zero page
-                            OR(opcode(4 DOWNTO 2) = "011" AND tcstate(3) = '0')
-                            --absolute
-                            OR(opcode(4 DOWNTO 2) = "101" AND tcstate(3) = '0'))
-                            --zero page, Y
+                        IF ((opcode(4 DOWNTO 2) = "001" AND tcstate(2) = '0') -- zero page
+                            OR(opcode(4 DOWNTO 2) = "011" AND tcstate(3) = '0') --absolute
+                            OR(opcode(4 DOWNTO 2) = "101" AND tcstate(3) = '0')) --zero page, Y
                             THEN
                             DOR <= STD_LOGIC_VECTOR(X);
-                            W_R <= '0'; --JB0510 W_R=0 signal should happen at
-                            the following cycle, NOT WHEN DOR IS loaded??
+                            W_R <= '0'; --JB0510 W_R=0 signal should happen at the following cycle, NOT WHEN DOR IS loaded??
                         END IF;
                     END IF;
                     --Address mode: accumulator cc:10 --JB0511 this lies inside NOT(hex1 >= 8 AND hex2 = A) TO distinguish from Arthy's.
                     IF opcode(4 DOWNTO 2) = "010" THEN
                         --Instruction: ASL aaa=000
                         --T2+T0
-                        IF (opcode(7 DOWNTO 5) = "000" AND tcstate = "111010")
-                            THEN
+                        IF (opcode(7 DOWNTO 5) = "000" AND tcstate = "111010") THEN
                             PC <= PC;
                             ABL <= ABL;
                             ABH <= ABH;
@@ -852,8 +816,7 @@ BEGIN
                         END IF;
                         --Instruction: ROL aaa=001
                         --T2+T0
-                        IF (opcode(7 DOWNTO 5) = "001" AND tcstate = "111010")
-                            THEN
+                        IF (opcode(7 DOWNTO 5) = "001" AND tcstate = "111010") THEN
                             PC <= PC;
                             ABL <= ABL;
                             ABH <= ABH;
@@ -864,8 +827,7 @@ BEGIN
                         END IF;
                         --Instruction: LSR or ROR aaa=010 or 011
                         --T2+T0
-                        IF ((opcode(7 DOWNTO 5) = "010" OR opcode(7 DOWNTO
-                            5) = "011") AND tcstate = "111010") THEN
+                        IF ((opcode(7 DOWNTO 5) = "010" OR opcode(7 DOWNTO 5) = "011") AND tcstate = "111010") THEN
                             PC <= PC;
                             ABL <= ABL;
                             ABH <= ABH;
@@ -904,17 +866,13 @@ BEGIN
                     END IF;
                 END IF;
                 --==cc=10 AND aaa=0xx are concerned ends == == == == == == == == == == == == == == == == == == == == == =
-                -------------YU's code starts here-------------------------------
-                -----
-                -------------JAEBIN's code starts here---------------------------
-                ---------
+                ------------------YU's code starts here-------------------------------
+                ----------------------JAEBIN's code starts here---------------------------
                 --cc=00
                 IF (opcode(1 DOWNTO 0) = "00") THEN
-                    ----------branch: xxy10000---------------------------------
-                    --------------
-                    IF (opcode(4 DOWNTO 2) = "100") THEN --bbb=100 does not
-                        overlab WITH anything ELSE
-                        .
+
+                    ------------------------branch: xxy10000---------------------------------
+                    IF (opcode(4 DOWNTO 2) = "100") THEN --bbb=100 does not overlab WITH anything ELSE.
                         --T2
                         IF (tcstate(2) = '0') THEN
                             PC <= PC + 1;
@@ -1111,8 +1069,7 @@ BEGIN
                             END IF;
                         END IF;
                         ---------the rest of cc=00, excluding branch and interrupt----------------
-                        --no overlap with Arthy's, because Arthy's only have
-                        bbb = 010 AND bbb = 110.
+                        --no overlap with Arthy's, because Arthy's only have bbb = 010 AND bbb = 110.
                     ELSE
                         --1.bbb=000 AND aaa=1xx. immediate.
                         IF (opcode(4 DOWNTO 2) = "000" AND opcode(7) = '1') THEN
@@ -1146,11 +1103,9 @@ BEGIN
                                 Sums <= '0';
                             END IF;
                         END IF;
-                        ---3.bbb=011. absolute. exceptions to JMP ABS(aaa=010)
-                        AND JMP IND(aaa = 011)
+                        ---3.bbb=011. absolute. exceptions to JMP ABS(aaa=010) AND JMP IND(aaa = 011)
                         ---exception 1/2: JMP ABS. bbb=011, aaa=010
-                        IF (opcode(4 DOWNTO 2) = "011" AND opcode(7 DOWNTO
-                            5) = "010") THEN
+                        IF (opcode(4 DOWNTO 2) = "011" AND opcode(7 DOWNTO 5) = "010") THEN
                             --T2
                             IF (tcstate(2) = '0') THEN
                                 ABL <= STD_LOGIC_VECTOR(PC(7 DOWNTO 0));
@@ -1174,8 +1129,7 @@ BEGIN
                             END IF;
                         END IF;
                         ---exception 2/2: JMP IND. bbb=011, aaa=011
-                        IF (opcode(4 DOWNTO 2) = "011" AND opcode(7 DOWNTO
-                            5) = "011") THEN
+                        IF (opcode(4 DOWNTO 2) = "011" AND opcode(7 DOWNTO 5) = "011") THEN
                             --both T2 and T4
                             IF (tcstate(2) = '0' OR tcstate(4) = '0') THEN
                                 ABL <= STD_LOGIC_VECTOR(PC(7 DOWNTO 0));
@@ -1197,8 +1151,7 @@ BEGIN
                             END IF;
                         END IF;
                         ---the rest of bbb=011 absolute.
-                        IF (opcode(4 DOWNTO 2) = "011" AND NOT(opcode(7 DOWNTO
-                            5) = "010") AND NOT(opcode(7 DOWNTO 5) = "011")) THEN
+                        IF (opcode(4 DOWNTO 2) = "011" AND NOT(opcode(7 DOWNTO 5) = "010") AND NOT(opcode(7 DOWNTO 5) = "011")) THEN
                             --T2
                             IF (tcstate(2) = '0') THEN
                                 PC <= PC + 1;
@@ -1229,8 +1182,7 @@ BEGIN
                                 Sums <= '0';
                             END IF;
                         END IF;
-                        ---4.bbb=101. zeropage,X. common to all aaa within
-                        cc = 00
+                        ---4.bbb=101. zeropage,X. common to all aaa within cc = 00
                         IF (opcode(4 DOWNTO 2) = "101") THEN
                             --T2
                             IF (tcstate(2) = '0') THEN
@@ -1259,8 +1211,7 @@ BEGIN
                                 Sums <= '0';
                             END IF;
                         END IF;
-                        ---5.bbb=111. absolute,X. common to all aaa within
-                        cc = 00
+                        ---5.bbb=111. absolute,X. common to all aaa within cc = 00
                         IF (opcode(4 DOWNTO 2) = "111") THEN
                             --T2
                             IF (tcstate(2) = '0') THEN
@@ -1314,8 +1265,7 @@ BEGIN
                             END IF;
                             --T1
                             IF (tcstate(1) = '0') THEN
-                                P(7) <= ADD(7); --JB set N. P is the
-                                processor status REGISTER (1 byte)
+                                P(7) <= ADD(7); --JB set N. P is the processor status REGISTER (1 byte)
                                 IF ADD = x"00" THEN
                                     P(1) <= '1';
                                 ELSE
@@ -1327,8 +1277,7 @@ BEGIN
                         IF (opcode(7 DOWNTO 5) = "111") THEN
                             --T0
                             IF (tcstate(0) = '0') THEN
-                                BI <= NOT(unsigned(Databus)); --JB0511 need
-                                TO invert!!!!!!!!!!!!
+                                BI <= NOT(unsigned(Databus)); --JB0511 need TO invert!!!!!!!!!!!!
                                 AI <= unsigned(X);
                                 Sums <= '1';
                                 I_ADDC <= '1'; --yuchen0513
@@ -1350,8 +1299,7 @@ BEGIN
                         IF (opcode(7 DOWNTO 5) = "110") THEN
                             --T0
                             IF (tcstate(0) = '0') THEN
-                                BI <= unsigned(NOT(Databus)); --JB0511 need
-                                TO invert!!!!!!!!!!!!
+                                BI <= unsigned(NOT(Databus)); --JB0511 need TO invert!!!!!!!!!!!!
                                 AI <= unsigned(Y);
                                 Sums <= '1';
                                 I_ADDC <= '1'; --yuchen0513
@@ -1407,15 +1355,13 @@ BEGIN
                                 W_R <= '1';
                             END IF;
                         END IF;
-                        ----------------------------aaa taken care of.-------------
-                        --------------------
+                        ----------------------------aaa taken care of.---------------------------------
                     END IF;
                 END IF;
-                -----------------------------JAEBIN's code ends here-------------
-                -----------------
+                -----------------------------JAEBIN's code ends here------------------------------
                 --------------------------ARTHY's code starts here--------------------------
                 --
-                --========================= SINGLE BYTE INSTRUCTIONS == == BEGIN == == == == ==
+                --========================= SINGLE BYTE INSTRUCTIONS ==== BEGIN ==========
                 --NOP
                 IF (opcode(7 DOWNTO 0) = x"EA") THEN
                     --if(tcstate(2) = '0') then --JB0511 deleted "and tcstate(0)= '0'"
@@ -1428,9 +1374,7 @@ BEGIN
                     END IF;
                 END IF; --NOP ends.
                 --PHA/PLA/PHP/PLP
-                IF ((opcode(7 DOWNTO 0) = x"48") OR (opcode(7 DOWNTO 0) = x"68")
-                    OR (opcode(7 DOWNTO 0) = x"08") OR
-                    (opcode(7 DOWNTO 0) = x"28")) THEN --PHA/PLA/PHP/PLP
+                IF ((opcode(7 DOWNTO 0) = x"48") OR (opcode(7 DOWNTO 0) = x"68") OR (opcode(7 DOWNTO 0) = x"08") OR (opcode(7 DOWNTO 0) = x"28")) THEN --PHA/PLA/PHP/PLP
                     --T2
                     IF (tcstate(2) = '0') THEN
                         PC <= PC - 1; --JB0511 PC-1?????
@@ -1456,8 +1400,7 @@ BEGIN
                         END IF;
                     END IF;
                     --T3
-                    IF (tcstate(3) = '0') THEN -- assume only PLA and PLP get
-                        here
+                    IF (tcstate(3) = '0') THEN -- assume only PLA and PLP get here
                         W_R <= '1'; -- back to read
                         PC <= PC;
                         S <= ADD;
@@ -1485,8 +1428,7 @@ BEGIN
                             END IF;
                             --PHA/PHP
                         ELSIF (opcode(5) = '0') THEN
-                            --SUBS <= '1'; --JB0511 Subtracts WHAT? Nothing
-                            goes IN TO AI OR BI.
+                            --SUBS <= '1'; --JB0511 Subtracts WHAT? Nothing goes IN TO AI OR BI.
                             S <= ADD;
                             W_R <= '1'; -- read
                         END IF;
@@ -1612,12 +1554,7 @@ BEGIN
                     END IF;
                 END IF; --Register instructions end.
                 -- Transfer instructions
-                IF ((opcode (7 DOWNTO 0) = x"8A") OR (opcode (7 DOWNTO 0) = x"9A")
-                    OR
-                    (opcode (7 DOWNTO 0) = x"AA") OR (opcode (7 DOWNTO 0) =
-                    x"BA") OR
-                    (opcode (7 DOWNTO 0) = x"98") OR (opcode (7 DOWNTO 0) =
-                    x"A8")) THEN
+                IF ((opcode (7 DOWNTO 0) = x"8A") OR (opcode (7 DOWNTO 0) = x"9A") OR (opcode (7 DOWNTO 0) = x"AA") OR (opcode (7 DOWNTO 0) = x"BA") OR (opcode (7 DOWNTO 0) = x"98") OR (opcode (7 DOWNTO 0) = x"A8")) THEN
                     --T2 + T0
                     IF (tcstate(2) = '0') THEN --JB0511 removed "and tcstate(0)='0'"
                         --PC <= PC;
@@ -1667,8 +1604,7 @@ BEGIN
                         PC <= PC + 1;
                     END IF;
                 END IF; -- Transfer instructions end.
-                -----------------------------Arthy's code ends here--------------
-                ----------------------
+                -----------------------------Arthy's code ends here------------------------------------
             END IF; --clk rising edge
         END IF; --reset
     END PROCESS;
@@ -1679,9 +1615,7 @@ BEGIN
         IF (opcode(1 DOWNTO 0) = "00") THEN
             --------------------------------branch: xxy10000-----------
             ------------------------------------
-            IF (opcode(4 DOWNTO 2) = "100") THEN --bbb=100 does not
-                overlab WITH anything ELSE
-                .
+            IF (opcode(4 DOWNTO 2) = "100") THEN --bbb=100 does not overlab WITH anything ELSE .
                 -- xx=00. N flag. P(7)
                 IF ((opcode(7 DOWNTO 6) = "00" AND P(7) = opcode(5)) OR -- xx=00. N flag. P(7)
                     (opcode(7 DOWNTO 6) = "01" AND P(6) = opcode(5)) OR -- xx=01. V(O) flag. P(6)
@@ -1699,6 +1633,7 @@ BEGIN
             BRC <= '0'; --yuchen 0514
         END IF;
     END PROCESS;
+
     PROCESS (ABH, ABL, ACC, X, Y, P)
     BEGIN
         ABH_out <= ABH;
@@ -1708,4 +1643,5 @@ BEGIN
         Y_out <= STD_LOGIC_VECTOR(Y);
         P_out <= STD_LOGIC_VECTOR(P);
     END PROCESS;
+
 END rtl;
