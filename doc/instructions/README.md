@@ -42,8 +42,9 @@ shown in the table below, the data fetched from memory will always be sent into 
 prepares for the next instruction. 
 
 
+Instructions taken from: http://www.6502.org/tutorials/6502opcodes.html
 
-## AND
+## AND - http://www.6502.org/tutorials/6502opcodes.html#AND
 
 AND (bitwise AND with accumulator)
 Affects Flags: N Z
@@ -60,3 +61,76 @@ Affects Flags: N Z
 |Indirect,Y  | AND ($44),Y | $31 | 001 | 100 | 01  | 2   | 5+  |
 
 + add 1 cycle if page boundary crossed
+
+
+## LDX - Load Index X with Memory - http://www.6502.org/tutorials/6502opcodes.html#LDX
+
+|MODE        | SYNTAX      | HEX | aaa | bbb | cc  | LEN | TIM |
+|---         |---          |---  |---  |---  |---  |---  |---  |
+|Immediate   | LDX #$44    | $A2 | 101 | 000 | 10  | 2   | 2   |
+|Zero Page   | LDX $44     | $A6 | 101 | 001 | 10  | 2   | 3   |
+|Zero Page,Y | LDX $44,Y   | $B6 | 101 | 101 | 10  | 2   | 4   |
+|Absolute    | LDX $4400   | $AE | 101 | 011 | 10  | 3   | 4   |
+|Absolute,Y  | LDX $4400,Y | $BE | 101 | 111 | 10  | 3   | 4+  |
+
+
++ add 1 cycle if page boundary crossed
+
+
+## Execution of LDX #1
+
+Let's start the journey with something simple.
+
+```
+LDX #1
+```
+
+This instruction will load the X-register with the immediate value 1. Go to https://www.masswerk.at/6502/assembler.html
+and assemble the application. The outcome is 
+
+```
+A2 01
+```
+
+A2 is the opcode and 01 the first immediate parameter.
+
+Enter the data A2 01 into Visual 6502 (http://www.visual6502.org/JSSim/expert.html) and reset the CPU. Also click the
+Trace more button until all columns are shown.
+
+The CPU has a T0 timing state which is a preparation state in which the CPU prepares the next instruction to execute
+while it also executes that current instruction. This is the reason why you often see T0+T2 for example, since the
+next instruction is in timing state T0 while the current instruction is in timing state T2.
+
+When the Visual 6502 starts to execute, the current instruction is defined to be BRK. The next instruction is our
+LDX. The Execute column shows BRK, while the Fetch column shows LDX #. The timing state is T1. I think that this means
+that the initial BRK instruction is in timing phase T1. The program counter PC points to the address 0000 which is
+where the opcode A2 is located. Since the PC points to the address, the address is also present on the data bus (db) 
+as you can see in the db-column, where the byte A2 shows up.
+
+The TIME of the LDX instrunction is 2. This means LDX is two cycles long. This means that it has Cycles T0 which is 
+it's preparation cycle which is executed along with the last cycle of the predecessor instruction. Then it has
+the first real cycle T1 and T2. T2 being it's last cycle and therefore T2 of LDX has to share a spot with T0 of the
+next instruction which merges T0 and T2 into T0+T2.
+
+The goal of LDX #imm is to load an immediate value into the index register X. If you look at Dr. Hansons diagram, 
+the X-Register is called "X INDEX REGISTER (X)" and it is located on the far right. Tt has no direct connection 
+to the databus where the immediate value 1 arrives during phase T2 (or rather T0+T2)! 
+
+The question is how does the immediate value get from the databus to the index register X?
+The answer is that in the case of LDX #imm, the immediate value goes through the ALU into the Adder Hold Register 
+(ADD) in phase T0+T2 and from there it goes into the index register X in T1 of the next instruction.
+
+First, in T0+T2, the signal DBADD is ouptut by the Datapath Control (DPControl). In Dr. Hansons diagram, DBADD is
+called DB/ADD and it causes the B input register to the ALU to latch data from the data bus.
+SBADD (= SB/ADD) is also asserted so that the current value on the SBus (SB) latches into the A input register
+of the ALU. The value SUMS is asserted so the ALU computes the sum. For some reason SB must hold the value 00 so that
+00 + 01 = 01. This valus 01 is output into the ADDER HOLD REGISTER which always latches the output of the ALU.
+The ADDER HOLD REGISTER is immediately placed onto the SB since the Visual 6502 outputs the signals ADDSB7,ADDSB06
+which in Hanson's diagram control the output of the ADDER HOLD REGISTER on the SB.
+
+In the phase T1 of the next instruction, the signal SBX is asserted. In Hanson's diagram SBX is called SB/X and it
+probably stands for "load the value on the SB into the index register X". So with the beginning of T1 of the 
+next instruction, the immediate value 01 is available inside the index X register. It is interesting to see that with the end of T2 of the LDX instruction itself, X does not have the immediate value loaded! This only happens with the beginning of the next instruction!
+
+<table class="logstream" id="logstream"><tbody><tr><td class="header">cycle</td><td class="header">ab</td><td class="header">db</td><td class="header">rw</td><td class="header">Fetch</td><td class="header">pc</td><td class="header">a</td><td class="header">x</td><td class="header">y</td><td class="header">s</td><td class="header">p</td><td class="header">Execute</td><td class="header">State</td><td class="header">ir</td><td class="header">tcstate</td><td class="header">pd</td><td class="header">adl</td><td class="header">adh</td><td class="header">sb</td><td class="header">alu</td><td class="header">alucin</td><td class="header">alua</td><td class="header">alub</td><td class="header">alucout</td><td class="header">aluvout</td><td class="header">dasb</td><td class="header">plaOutputs</td><td class="header">DPControl</td><td class="header">idb</td><td class="header">dor</td><td class="header">irq</td><td class="header">nmi</td><td class="header">res</td></tr><tr><td class="oddcol">0</td><td>0000</td><td class="oddcol">a2</td><td>1</td><td class="oddcol">LDX&nbsp;#</td><td>0000</td><td class="oddcol">aa</td><td>00</td><td class="oddcol">00</td><td>fd</td><td class="oddcol">nv‑BdIZc</td><td>BRK</td><td class="oddcol">T1</td><td>00</td><td class="oddcol">101111</td><td>00</td><td class="oddcol">00</td><td>00</td><td class="oddcol">ff</td><td>00</td><td class="oddcol">0</td><td>ff</td><td class="oddcol">00</td><td>0</td><td class="oddcol">0</td><td>ff</td><td class="oddcol">brk/rti,SUMS</td><td>ADL/ABL,ADH/ABH,SS,DBADD,SBADD,SUMS,#DAA,~DAA,ADDADL,#DSA,~DSA,ADHPCH,ADLPCL,DL/ADH,DL/DB</td><td class="oddcol">00</td><td>00</td><td class="oddcol">1</td><td>1</td><td class="oddcol">1</td></tr><tr><td class="oddcol">0</td><td>0000</td><td class="oddcol">a2</td><td>1</td><td class="oddcol">LDX&nbsp;#</td><td>0000</td><td class="oddcol">aa</td><td>00</td><td class="oddcol">00</td><td>fd</td><td class="oddcol">nv‑BdIZc</td><td>BRK</td><td class="oddcol">T1</td><td>00</td><td class="oddcol">101111</td><td>a2</td><td class="oddcol">01</td><td>00</td><td class="oddcol">ff</td><td>ff</td><td class="oddcol">0</td><td>ff</td><td class="oddcol">00</td><td>0</td><td class="oddcol">0</td><td>ff</td><td class="oddcol">brk/rti,SUMS</td><td>ADL/ABL,ADH/ABH,SUMS,#DAA,~DAA,ADDSB7,ADDSB06,#DSA,~DSA,SBDB,PCHADH,PCLADL</td><td class="oddcol">ff</td><td>00</td><td class="oddcol">1</td><td>1</td><td class="oddcol">1</td></tr><tr><td class="oddrow">1</td><td class="oddrowcol">0001</td><td class="oddrow">01</td><td class="oddrowcol">1</td><td class="oddrow"></td><td class="oddrowcol">0001</td><td class="oddrow">aa</td><td class="oddrowcol">00</td><td class="oddrow">00</td><td class="oddrowcol">fd</td><td class="oddrow">nv‑BdIZc</td><td class="oddrowcol">LDX&nbsp;#</td><td class="oddrow">T0+T2</td><td class="oddrowcol">a2</td><td class="oddrow">010111</td><td class="oddrowcol">a2</td><td class="oddrow">01</td><td class="oddrowcol">00</td><td class="oddrow">ff</td><td class="oddrowcol">ff</td><td class="oddrow">0</td><td class="oddrowcol">ff</td><td class="oddrow">ff</td><td class="oddrowcol">0</td><td class="oddrow">0</td><td class="oddrowcol">ff</td><td class="oddrow">xy,T0‑ldx/tax/tsx,T2,T2‑ADL/ADD,T0,SUMS</td><td class="oddrowcol">ADL/ABL,ADH/ABH,SS,DBADD,SBADD,SUMS,#DAA,~DAA,ADDSB7,ADDSB06,#DSA,~DSA,SBDB,ADHPCH,PCHADH,PCLADL,ADLPCL</td><td class="oddrow">ff</td><td class="oddrowcol">ff</td><td class="oddrow">1</td><td class="oddrowcol">1</td><td class="oddrow">1</td></tr><tr><td class="oddrow">1</td><td class="oddrowcol">0001</td><td class="oddrow">01</td><td class="oddrowcol">1</td><td class="oddrow"></td><td class="oddrowcol">0001</td><td class="oddrow">aa</td><td class="oddrowcol">00</td><td class="oddrow">00</td><td class="oddrowcol">fd</td><td class="oddrow">nv‑BdIZc</td><td class="oddrowcol">LDX&nbsp;#</td><td class="oddrow">T0+T2</td><td class="oddrowcol">a2</td><td class="oddrow">010111</td><td class="oddrowcol">01</td><td class="oddrow">02</td><td class="oddrowcol">00</td><td class="oddrow">ff</td><td class="oddrowcol">fe</td><td class="oddrow">0</td><td class="oddrowcol">ff</td><td class="oddrow">ff</td><td class="oddrowcol">1</td><td class="oddrow">0</td><td class="oddrowcol">ff</td><td class="oddrow">xy,T0‑ldx/tax/tsx,T2,T2‑ADL/ADD,T0,SUMS</td><td class="oddrowcol">ADL/ABL,ADH/ABH,SUMS,#DAA,~DAA,#DSA,~DSA,SBDB,PCHADH,PCLADL,DL/DB</td><td class="oddrow">ff</td><td class="oddrowcol">ff</td><td class="oddrow">1</td><td class="oddrowcol">1</td><td class="oddrow">1</td></tr><tr><td class="oddcol">2</td><td>0002</td><td class="oddcol">00</td><td>1</td><td class="oddcol">BRK</td><td>0002</td><td class="oddcol">aa</td><td>01</td><td class="oddcol">00</td><td>fd</td><td class="oddcol">nv‑BdIzc</td><td>LDX&nbsp;#</td><td class="oddcol">T1</td><td>a2</td><td class="oddcol">101111</td><td>01</td><td class="oddcol">02</td><td>00</td><td class="oddcol">01</td><td>fe</td><td class="oddcol">0</td><td>01</td><td class="oddcol">01</td><td>1</td><td class="oddcol">0</td><td>01</td><td class="oddcol">xy,SUMS</td><td>ADL/ABL,ADH/ABH,SBX,SS,DBADD,SBADD,SUMS,#DAA,~DAA,#DSA,~DSA,SBDB,ADHPCH,PCHADH,PCLADL,ADLPCL,DL/DB</td><td class="oddcol">01</td><td>01</td><td class="oddcol">1</td><td>1</td><td class="oddcol">1</td></tr></tbody></table>
+

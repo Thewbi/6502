@@ -570,8 +570,7 @@ BEGIN
 
                 --======================cc=10 are concerned == == == == == == == == == == == == == == == == == == == == == =
                 --STX and LDX address mode special cases
-                --1) Address Mode: Zero page, X==> Zero page, Y; Instructions:
-                STX AND LDX
+                --1) Address Mode: Zero page, X==> Zero page, Y; Instructions: STX AND LDX
                 --Timing T2
                 IF (opcode(4 DOWNTO 2) = "101" AND tcstate(2) = '0' AND (((opcode(7 DOWNTO 5) = "100" OR opcode(7 DOWNTO 5) = "101") AND opcode(1 DOWNTO 0) = "10"))) THEN
                     PC <= PC;
@@ -591,26 +590,38 @@ BEGIN
                     BI <= unsigned(Databus);
                     Sums <= '1';
                 END IF;
+                
                 --JB0511 To avoid conflict with Arthy's, avoid hex1>=8 and hex2=A.
                 IF opcode(1 DOWNTO 0) = "10" AND NOT(opcode(7) = '1' AND opcode(3 DOWNTO 2) = "10") THEN
-                    --For all the instructions in this section (cc=10), T0 and T1 has the same behaviors
-                    --T0
+
+                    -- LDX #$44
+
+                    -- For all the instructions in this section (cc=10), T0 and T1 has the same behaviors
+
+                    -- T0
                     IF tcstate(0) = '0' THEN
+                        -- increment program counter
                         PC <= PC + 1;
+                        -- ABL - address bus low, load program counter value into address bus low so that the address bus produces the data at PC
                         ABL <= STD_LOGIC_VECTOR(PC(7 DOWNTO 0));
+                        -- ABH - address bus high, load program counter value into address bus high so that the address bus produces the data at PC
                         ABH <= STD_LOGIC_VECTOR(PC(15 DOWNTO 8));
+
+                        -- ???
                         W_R <= '1';
-                        --LDX needs one more operation
+
+                        -- LDX needs one more operation
                         IF opcode(7 DOWNTO 5) = "101" THEN
                             X <= unsigned(Databus);
                         END IF;
                     END IF;
-                    --T1
+
+                    -- T1
                     IF tcstate(1) = '0' THEN
                         PC <= PC + 1;
                         ABL <= STD_LOGIC_VECTOR(PC(7 DOWNTO 0));
                         ABH <= STD_LOGIC_VECTOR(PC(15 DOWNTO 8));
-                        --LDX affects the flags
+                        -- LDX affects the flags
                         IF opcode(7 DOWNTO 5) = "101" THEN
                             IF X(7) = '1' THEN
                                 P(7) <= '1';
@@ -624,6 +635,7 @@ BEGIN
                             END IF;
                         END IF;
                     END IF;
+
                     --Instruction: ASL; aaa: 000; bbb: don't care; cc: 10
                     --SD1
                     IF (opcode(7 DOWNTO 5) = "000" AND SD1 = '1') THEN
