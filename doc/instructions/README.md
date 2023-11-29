@@ -174,3 +174,141 @@ the machine code is (https://www.masswerk.at/6502/assembler.html)
 
 The idea is to not simulate the phases phi1 and phi2 of the real 6502 hardware, since some FPGAs do not even have
 to parallel clock sources. Therefore the entire design will only simulate the T0+T?, T1, T2, ... phases of the instructions.
+
+### Cycle 0
+
+Very first state.
+
+Initialize CPU:
+
+cpu.x = 0
+cpu.y = 0
+cpu.ir = 0 // instruction register
+
+cpu.pc = 0 // programm counter
+cpu.adl = cpu.pc & 0xFF
+cpu.adh = (cpu.pc >> 8) & 0xFF
+
+// this happens in T1
+cpu.fetch = instruction_memory[cpu.pc]
+databus = cpu.fetch
+cpu.execute = BRK (0x00)
+
+// Initialize state machine for BRK.
+// Choose the linear state machine. 
+// Initial state is T1.
+sm.state == T1
+
+// Timing Generator
+tg.input = BRK // input is: BRK
+tg.cycle_count = 2 // BRK can take more cycles than 2 but if another instruction follow, it takes 2 cycles only????
+
+cpu.pc = cpu.pc + 1
+cpu.adl = cpu.pc & 0xFF
+cpu.adh = (cpu.pc >> 8) & 0xFF
+
+cpu.SBX = 0
+cpu.SBY = 0
+
+// next state (T2)
+sm.state++
+
+
+### Cycle 1, 2, 3, ....
+
+while (!done) {
+
+    cpu.ir = databus
+    databus = instruction_memory[cpu.pc]
+
+    // if StateMachine is on the last cycle_count of the current instruction
+    if (sm.state == tg.cycle_count) {
+
+        // add T0 cycle for the next instruction
+        sm.state_zero = true
+
+        // start the next instruction
+        cpu.execute = cpu.fetch
+
+        if (cpu.execute == LDX)
+        {
+            // activate the inputs of the ALU but do not compute the ALU yet
+            cpu.ADDSB7 = 1;
+            cpu.ADDSB06 = 1;
+            cpu.SUMS = 1;
+        }
+        if (cpu.execute == LDY)
+        {
+            // activate the inputs of the ALU but do not compute the ALU yet
+            cpu.ADDSB7 = 1;
+            cpu.ADDSB06 = 1;
+            cpu.SUMS = 1;
+        }
+
+        // back to state T1
+        sm.state = T1
+
+        // increment program counter
+        cpu.pc = cpu.pc + 1
+        cpu.adl = cpu.pc & 0xFF
+        cpu.adh = (cpu.pc >> 8) & 0xFF
+
+        continue;
+    }
+
+    // T1 state
+    if (sm.state == T1) {
+
+        // this happens in T1
+        cpu.fetch = instruction_memory[cpu.pc]
+        databus = cpu.fetch
+        //cpu.execute = decode(databus)
+
+        if (cpu.execute == LDX)
+        {
+            // read inputs compute output
+            alu.compute();
+
+            // activate input to the X-Register
+            cpu.SBX = 1;
+
+            // read current value from SB that the ALU has output
+            x_register.latch_SB();
+        }
+        if (cpu.execute == LDY)
+        {
+            // read inputs compute output
+            alu.compute();
+
+            // activate input to the Y-Register
+            cpu.SBY = 1;
+
+            // read current value from SB that the ALU has output
+            y_register.latch_SB();
+        }
+
+        // timing generation
+        tg.input = decode(databus)
+        tg.cycle_count = decode(databus).cycle_count
+
+        // increment program counter
+        cpu.pc = cpu.pc + 1
+        cpu.adl = cpu.pc & 0xFF
+        cpu.adh = (cpu.pc >> 8) & 0xFF
+
+        // next state
+        sm.state++
+
+        // reset random control logic signals
+        cpu.SBX = 0
+        cpu.SBY = 0
+        cpu.ADDSB7 = 0;
+        cpu.ADDSB06 = 0;
+        cpu.SUMS = 0;
+
+        continue;
+    }
+
+}
+
+
