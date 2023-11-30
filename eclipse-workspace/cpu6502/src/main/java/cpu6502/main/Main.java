@@ -84,7 +84,6 @@ public class Main {
 		cpu.adl = cpu.pc & 0xFF;
 		cpu.adh = (cpu.pc >> 8) & 0xFF;
 
-		
 		// during bootstrapping, the CPU is executing BRK! (See Visual6502)
 		cpu.execute = Instructions.BRK;
 
@@ -105,6 +104,40 @@ public class Main {
 		while (!done && cycleCount < 10) {
 			
 			
+			
+			
+			//
+			// ALU Logic
+			//
+
+			// run ALU logic, read inputs, compute output
+			alu.sums = cpu.SUMS;
+			alu.aInputRegister = 0;
+			if (cpu.DBADD) {
+				alu.bInputRegister = cpu.databus;
+			}
+			alu.compute();
+
+			// output the value from the adder hold register onto the sbus
+			if (cpu.ADDSB7 && cpu.ADDSB06) {
+				cpu.sb = alu.adderHoldRegister;
+			}
+			
+			//
+			// CPU status register
+			//
+			
+			if (cpu.ir5C) {
+				// bit 5 of instruction register determines the value of the carry flag
+				cpu.carry = (cpu.ir & 0x20) > 0;
+				
+				cpu.ir5C = false;
+			}
+			
+			
+			
+			
+			
 			//cpu.databus = cpu.fetch;
 			
 			cpu.databus = codeSegment[cpu.pc];
@@ -115,12 +148,6 @@ public class Main {
 				
 				cpu.fetch = codeSegment[cpu.pc];
 				
-				
-//				if ((cpu.execute != Instructions.SEC) && (cpu.execute != Instructions.CLC))
-//				{
-//					
-//				}
-
 				if (cpu.execute == Instructions.LDX_IMM) {
 					// activate input to the X-Register
 					cpu.SBX = true;
@@ -136,16 +163,6 @@ public class Main {
 						// read current value from SB which is computed by the ALU
 						cpu.y = cpu.sb;
 					}
-				}
-				//
-				// CPU status register
-				//
-				
-				if (cpu.ir5C) {
-					// bit 5 of instruction register determines the value of the carry flag
-					cpu.carry = (cpu.ir & 0x20) > 0;
-					
-					cpu.ir5C = false;
 				}
 
 				cpu.ir = cpu.databus;
@@ -211,22 +228,7 @@ public class Main {
 				}
 			}
 
-			//
-			// ALU Logic
-			//
-
-			// run ALU logic, read inputs, compute output
-			alu.sums = cpu.SUMS;
-			alu.aInputRegister = 0;
-			if (cpu.DBADD) {
-				alu.bInputRegister = cpu.databus;
-			}
-			alu.compute();
-
-			// output the value from the adder hold register onto the sbus
-			if (cpu.ADDSB7 && cpu.ADDSB06) {
-				cpu.sb = alu.adderHoldRegister;
-			}
+			
 			
 			//
 			// output state
