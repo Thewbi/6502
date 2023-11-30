@@ -5,11 +5,17 @@ public enum Instructions {
 	/** 0x00 */
 	BRK(0x00),
 	
-	/** 0x00 */
-	LDX(0xA2),
+	/** 0x18 */
+	CLC(0x18),
 	
-	/** 0x00 */
-	LDY(0xA0),
+	/** 0x69 */
+	ADC_IMM(0x69),
+	
+	/** 0xA2 */
+	LDX_IMM(0xA2),
+	
+	/** 0xA0 */
+	LDY_IMM(0xA0),
 
 	/** 0xFF */
 	UNKNOWN(0xFF);
@@ -26,19 +32,24 @@ public enum Instructions {
 
 	public static String getName(final int numVal) {
 
-		switch (numVal) {
+		switch (numVal & 0xFF) {
 
 		case 0x00:
 			return "BRK";
 			
+		case 0x18:
+			return "CLC";
+			
+		case 0x69:
+			return "ADC #";
+			
 		case 0xA0:
-			return "LDY";
+			return "LDY #";
 			
 		case 0xA2:
-			return "LDX";
+			return "LDX #";
 
 		default:
-			// return "UNKNOWN";
 			throw new RuntimeException("Unknown instruction! numVal:" + numVal);
 		}
 	}
@@ -50,14 +61,19 @@ public enum Instructions {
 		case BRK:
 			return "BRK";
 			
-		case LDY:
-			return "LDY";
+		case CLC:
+			return "CLC";
 			
-		case LDX:
-			return "LDX";
+		case ADC_IMM:
+			return "ADC #";
+			
+		case LDY_IMM:
+			return "LDY #";
+			
+		case LDX_IMM:
+			return "LDX #";
 
 		default:
-			// return "UNKNOWN";
 			throw new RuntimeException("Unknown instruction! instruction: " + instruction);
 		}
 	}
@@ -68,12 +84,18 @@ public enum Instructions {
 
 		case 0x00:
 			return BRK;
+			
+		case 0x18:
+			return CLC;
+			
+		case 0x69:
+			return ADC_IMM;
 		
 		case 0xA0:
-			return LDY;
+			return LDY_IMM;
 			
 		case 0xA2:
-			return LDX;
+			return LDX_IMM;
 
 		default:
 			throw new RuntimeException("Unknown instruction!");

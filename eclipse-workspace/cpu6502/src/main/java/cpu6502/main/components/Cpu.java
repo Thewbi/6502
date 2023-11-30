@@ -14,6 +14,15 @@ public class Cpu {
 
 	// instruction register
 	public int ir;
+	
+	// flags
+	public boolean carry;
+	public boolean zero;
+	public boolean interrupt;
+	public boolean decimal;
+	public boolean brk;
+	public boolean overflow;
+	public boolean negative;
 
 	// program counter
 	public int pc;
@@ -33,7 +42,7 @@ public class Cpu {
 	public Instructions execute;
 	
 	// data bus and s bus ???
-	public byte databus;
+	public int databus;
 	public int sb;
 	
 	// adder hold register will output to SB
@@ -52,6 +61,15 @@ public class Cpu {
 
 		// instruction register
 		ir = 0;
+		
+		// flags
+		carry = false;
+		zero = true;
+		interrupt = true;
+		decimal = false;
+		brk = true;
+		overflow = false;
+		negative = false;
 
 		// program counter
 		pc = 0;
@@ -69,6 +87,26 @@ public class Cpu {
 		SUMS = false;
 		
 		DBADD = false;
+	}
+
+	public void dump() {
+		System.out.print(" db:" + String.format("%1$02X", (databus & 0xFF)));
+		System.out.print(" Fetch:" + String.format("%1$-6s", Instructions.getName(fetch)));
+		System.out.print(" pc:" + String.format("%1$-4s", pc));
+		System.out.print(" x:" + Integer.toString(x, 16));
+		System.out.print(" y:" + Integer.toString(y, 16));
+		System.out.print(" Execute:" + Instructions.getName(execute));
+		
+		// flags
+		System.out.print(" Flags(p):");
+		System.out.print(negative ? "N" : "n");
+		System.out.print(overflow ? "V" : "v");
+		System.out.print("-");
+		System.out.print(brk ? "B" : "b");
+		System.out.print(decimal ? "D" : "d");
+		System.out.print(interrupt ? "I" : "i");
+		System.out.print(zero ? "Z" : "z");
+		System.out.print(carry ? "C" : "c");
 	}
 
 }

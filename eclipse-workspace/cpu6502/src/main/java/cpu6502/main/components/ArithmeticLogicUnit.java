@@ -2,8 +2,8 @@ package cpu6502.main.components;
 
 public class ArithmeticLogicUnit {
 	
-	public byte aInputRegister;
-	public byte bInputRegister;
+	public int aInputRegister;
+	public int bInputRegister;
 	
 	public boolean sums;
 	public boolean ands;
