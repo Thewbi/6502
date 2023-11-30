@@ -54,6 +54,10 @@ public class Cpu {
 	
 	// input to the ALU b input register, when DBADD is true, the ALU b input register will latch the databus (See Dr. Hansons Diagram)
 	public boolean DBADD;
+	
+	// SEC - set carry. For set carry, the random control logic will set the IR5/C signal
+	// The status register will read this signal and set the carry flag
+	public boolean ir5C;
 
 	public void reset() {
 		x = 0;
@@ -87,11 +91,13 @@ public class Cpu {
 		SUMS = false;
 		
 		DBADD = false;
+		
+		ir5C = false;
 	}
 
 	public void dump() {
 		System.out.print(" db:" + String.format("%1$02X", (databus & 0xFF)));
-		System.out.print(" Fetch:" + String.format("%1$-6s", Instructions.getName(fetch)));
+		System.out.print(" Fetch:" + String.format("%1$-6s", Instructions.getNameWithEmptyOption(fetch)));
 		System.out.print(" pc:" + String.format("%1$-4s", pc));
 		System.out.print(" x:" + Integer.toString(x, 16));
 		System.out.print(" y:" + Integer.toString(y, 16));

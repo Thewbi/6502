@@ -19,6 +19,9 @@ public class InstructionDecode {
 		case CLC:
 			return 2;
 			
+		case SEC:
+			return 2;
+			
 		case ADC_IMM:
 			return 2;
 
