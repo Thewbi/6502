@@ -84,9 +84,7 @@ public class Main {
 		cpu.adl = cpu.pc & 0xFF;
 		cpu.adh = (cpu.pc >> 8) & 0xFF;
 
-		// this happens in T1
-		cpu.fetch = codeSegment[cpu.pc];
-		cpu.databus = cpu.fetch;
+		
 		// during bootstrapping, the CPU is executing BRK! (See Visual6502)
 		cpu.execute = Instructions.BRK;
 
@@ -104,16 +102,12 @@ public class Main {
 		
 		while (!done && cycleCount < 10) {
 			
-			
-			
+			cpu.fetch = codeSegment[cpu.pc];
+			cpu.databus = cpu.fetch;
 			
 			cpu.databus = codeSegment[cpu.pc];
 
 			if (rcl.state == 1) {
-
-				// this happens in T1
-				cpu.fetch = codeSegment[cpu.pc];
-				cpu.databus = cpu.fetch;
 
 				if (cpu.execute == Instructions.LDX_IMM) {
 					// activate input to the X-Register
@@ -130,6 +124,16 @@ public class Main {
 						// read current value from SB which is computed by the ALU
 						cpu.y = cpu.sb;
 					}
+				}
+				//
+				// CPU status register
+				//
+				
+				if (cpu.ir5C) {
+					// bit 5 of instruction register determines the value of the carry flag
+					cpu.carry = (cpu.ir & 0x20) > 0;
+					
+					cpu.ir5C = false;
 				}
 
 				cpu.ir = cpu.databus;
@@ -170,6 +174,14 @@ public class Main {
 					cpu.SUMS = true;
 					cpu.DBADD = true;
 				}
+				if (cpu.execute == Instructions.SEC) {
+					// the cpu status register will set the carry flag to the value of bit 5 of the ir
+					cpu.ir5C = true;
+				}
+				if (cpu.execute == Instructions.CLC) {
+					// the cpu status register will set the carry flag to the value of bit 5 of the ir
+					cpu.ir5C = true;
+				}
 
 				// back to state T1
 				rcl.state = 1;
@@ -192,6 +204,8 @@ public class Main {
 			if (cpu.ADDSB7 && cpu.ADDSB06) {
 				cpu.sb = alu.adderHoldRegister;
 			}
+			
+			
 
 			//
 			// increment program counter
