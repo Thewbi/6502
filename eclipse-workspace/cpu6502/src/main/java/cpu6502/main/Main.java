@@ -94,6 +94,8 @@ public class Main {
 
 		// start the next instruction
 		cpu.execute = Instructions.fromValue(cpu.ir);
+		
+		boolean pcIncrement = true;
 
 		boolean done = false;
 		int cycleCount = 0;
@@ -102,12 +104,22 @@ public class Main {
 		
 		while (!done && cycleCount < 10) {
 			
-			cpu.fetch = codeSegment[cpu.pc];
-			cpu.databus = cpu.fetch;
+			
+			//cpu.databus = cpu.fetch;
 			
 			cpu.databus = codeSegment[cpu.pc];
+			
+			rcl.init_state = false;
 
 			if (rcl.state == 1) {
+				
+				cpu.fetch = codeSegment[cpu.pc];
+				
+				
+//				if ((cpu.execute != Instructions.SEC) && (cpu.execute != Instructions.CLC))
+//				{
+//					
+//				}
 
 				if (cpu.execute == Instructions.LDX_IMM) {
 					// activate input to the X-Register
@@ -149,6 +161,8 @@ public class Main {
 				cpu.SUMS = false;
 
 			} else if (rcl.state == 2) {
+				
+				cpu.fetch = (byte) 0xFF;
 
 				// start the next instruction
 				cpu.execute = Instructions.fromValue(cpu.ir);
@@ -187,6 +201,15 @@ public class Main {
 				rcl.state = 1;
 
 			}
+			
+			// state T0
+			if (rcl.init_state) 
+			{
+				if ((cpu.execute == Instructions.SEC) || (cpu.execute == Instructions.CLC))
+				{
+					pcIncrement = false;
+				}
+			}
 
 			//
 			// ALU Logic
@@ -205,21 +228,25 @@ public class Main {
 				cpu.sb = alu.adderHoldRegister;
 			}
 			
-			
-
-			//
-			// increment program counter
-			//
-
-			cpu.pc += 1;
-			cpu.adl = (byte) (cpu.pc & 0xFF);
-			cpu.adh = (byte) ((cpu.pc >> 8) & 0xFF);
-			
 			//
 			// output state
 			//
 			
 			dump(cycleCount, cpu);
+
+			//
+			// increment program counter
+			//
+
+			if (pcIncrement) {
+				cpu.pc += 1;
+				cpu.adl = (byte) (cpu.pc & 0xFF);
+				cpu.adh = (byte) ((cpu.pc >> 8) & 0xFF);
+			}
+			
+			pcIncrement = true;
+			
+			
 			
 			//
 			// next cycle
