@@ -28,18 +28,21 @@ public class Main {
 		// LDX #1
 		// LDY #2
 		
-//		// LDX #1 - load x with 1
-//		codeSegment[idx++] = (byte) 0xA2; // -94
-//		codeSegment[idx++] = (byte) 0x01; // 1
-//		// LDY #2 - load y with 2
-//		codeSegment[idx++] = (byte) 0xA0; // -96
-//		codeSegment[idx++] = (byte) 0x02; // 2
+		// LDX #1 - load x with 1
+		codeSegment[idx++] = (byte) 0xA2; // -94
+		codeSegment[idx++] = (byte) 0x01; // 1
+		// LDY #2 - load y with 2
+		codeSegment[idx++] = (byte) 0xA0; // -96
+		codeSegment[idx++] = (byte) 0x02; // 2
 		
-		// Snippet - CLC
+		// Snippet - SEC, CLC - set and clear the carry flag
 		//
 		// https://www.pagetable.com/c64ref/6502/?tab=2#CLC
-		// clc    - clear the carry flag (0 -> C)
-		codeSegment[idx++] = (byte) 0x18;
+		
+//		// sec    - set the carry flag (1 -> C)
+//		codeSegment[idx++] = (byte) 0x38;
+//		// clc    - clear the carry flag (0 -> C)
+//		codeSegment[idx++] = (byte) 0x18;
 		
 		// Snippet - ADC application
 		//
@@ -97,7 +100,7 @@ public class Main {
 		boolean done = false;
 		int cycleCount = 0;
 		
-		dump(cycleCount, cpu);
+		//dump(cycleCount, cpu);
 		
 		while (!done && cycleCount < 10) {
 			
@@ -197,18 +200,18 @@ public class Main {
 			cpu.pc += 1;
 			cpu.adl = (byte) (cpu.pc & 0xFF);
 			cpu.adh = (byte) ((cpu.pc >> 8) & 0xFF);
-
-			//
-			// next cycle
-			//
-
-			cycleCount++;
 			
 			//
 			// output state
 			//
 			
 			dump(cycleCount, cpu);
+			
+			//
+			// next cycle
+			//
+
+			cycleCount++;
 		}
 		
 	}

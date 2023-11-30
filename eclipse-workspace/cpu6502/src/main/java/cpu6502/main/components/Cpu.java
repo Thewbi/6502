@@ -101,7 +101,7 @@ public class Cpu {
 		System.out.print(" pc:" + String.format("%1$-4s", pc));
 		System.out.print(" x:" + Integer.toString(x, 16));
 		System.out.print(" y:" + Integer.toString(y, 16));
-		System.out.print(" Execute:" + Instructions.getName(execute));
+		System.out.print(" Execute:" + String.format("%1$-6s", Instructions.getName(execute)));
 		
 		// flags
 		System.out.print(" Flags(p):");
