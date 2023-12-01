@@ -61,9 +61,13 @@ public class Cpu {
 	// input to the ALU b input register, when DBADD is true, the ALU b input register will latch the databus (See Dr. Hansons Diagram)
 	public boolean DBADD;
 	
-	// SEC - set carry. For set carry, the random control logic will set the IR5/C signal
+	// SEC - set carry and Clear Carry. For set carry, the random control logic will set the IR5/C signal
 	// The status register will read this signal and set the carry flag
 	public boolean ir5C;
+	
+	// SEC - set interrupt and clear interrupt. For set interrupt and clear interrupt, the random control logic will set the IR5/C signal
+	// The status register will read this signal and set the interrupt flag
+	public boolean ir5I;
 	
 	// connect databus to sbus
 	public boolean SBDB;
@@ -150,6 +154,7 @@ public class Cpu {
 		DBADD = false;
 		
 		ir5C = false;
+		ir5I = false;
 		
 		// direct connection between the data bus and the sbus
 		SBDB = false;
