@@ -19,6 +19,9 @@ public enum Instructions {
 
 	/** 0xA0 */
 	LDY_IMM(0xA0),
+	
+	/** 0xA9 */
+	LDA_IMM(0xA9),
 
 	/** 0xFF */
 	UNKNOWN(0xFF);
@@ -48,6 +51,7 @@ public enum Instructions {
 		case 0x69:
 		case 0xA0:
 		case 0xA2:
+		case 0xA9:
 			return true;
 		default:
 			return false;
@@ -75,6 +79,9 @@ public enum Instructions {
 
 		case 0xA2:
 			return "LDX #";
+			
+		case 0xA9:
+			return "LDA #";
 
 		default:
 			throw new RuntimeException("Unknown instruction! numVal:" + numVal);
@@ -102,6 +109,9 @@ public enum Instructions {
 
 		case LDX_IMM:
 			return "LDX #";
+			
+		case LDA_IMM:
+			return "LDA #";
 
 		default:
 			throw new RuntimeException("Unknown instruction! instruction: " + instruction);
@@ -129,6 +139,9 @@ public enum Instructions {
 
 		case 0xA2:
 			return LDX_IMM;
+			
+		case 0xA9:
+			return LDA_IMM;
 
 		default:
 			throw new RuntimeException("Unknown instruction! numVal: " + numVal);

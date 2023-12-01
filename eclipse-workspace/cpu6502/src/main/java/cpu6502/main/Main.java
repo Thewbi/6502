@@ -27,22 +27,26 @@ public class Main {
 		//
 		// LDX #1
 		// LDY #2
+		// LDA #3
 		
-		// LDX #1 - load x with 1
-		codeSegment[idx++] = (byte) 0xA2; // -94
-		codeSegment[idx++] = (byte) 0x01; // 1
-		// LDY #2 - load y with 2
-		codeSegment[idx++] = (byte) 0xA0; // -96
-		codeSegment[idx++] = (byte) 0x02; // 2
+//		// LDX #1 - load x with 1
+//		codeSegment[idx++] = (byte) 0xA2; // -94
+//		codeSegment[idx++] = (byte) 0x01; // 1
+//		// LDY #2 - load y with 2
+//		codeSegment[idx++] = (byte) 0xA0; // -96
+//		codeSegment[idx++] = (byte) 0x02; // 2
+//		// LDA #3 - load a with 3
+//		codeSegment[idx++] = (byte) 0xA9; // 
+//		codeSegment[idx++] = (byte) 0x03; // 3
 		
 		// Snippet - SEC, CLC - set and clear the carry flag
 		//
 		// https://www.pagetable.com/c64ref/6502/?tab=2#CLC
 		
-//		// sec    - set the carry flag (1 -> C)
-//		codeSegment[idx++] = (byte) 0x38;
-//		// clc    - clear the carry flag (0 -> C)
-//		codeSegment[idx++] = (byte) 0x18;
+		// sec    - set the carry flag (1 -> C)
+		codeSegment[idx++] = (byte) 0x38;
+		// clc    - clear the carry flag (0 -> C)
+		codeSegment[idx++] = (byte) 0x18;
 		
 		// Snippet - ADC application
 		//
@@ -103,9 +107,6 @@ public class Main {
 		
 		while (!done && cycleCount < 10) {
 			
-			
-			
-			
 			//
 			// ALU Logic
 			//
@@ -138,8 +139,6 @@ public class Main {
 			
 			
 			
-			//cpu.databus = cpu.fetch;
-			
 			cpu.databus = codeSegment[cpu.pc];
 			
 			rcl.init_state = false;
@@ -162,6 +161,20 @@ public class Main {
 					if (cpu.SBY) {
 						// read current value from SB which is computed by the ALU
 						cpu.y = cpu.sb;
+					}
+				}
+				if (cpu.execute == Instructions.LDA_IMM) {
+					
+//					// connect sb and databus
+//					cpu.SBDB = true;
+//					// the value travels from the db onto the sb
+//					cpu.sb = cpu.databus;
+					
+					// activate input to the AC-Register
+					cpu.SBAC = true;
+					if (cpu.SBAC) {
+						// read current value from SB
+						cpu.a = cpu.sb;
 					}
 				}
 
@@ -205,6 +218,13 @@ public class Main {
 					cpu.SUMS = true;
 					cpu.DBADD = true;
 				}
+				if (cpu.execute == Instructions.LDA_IMM) {
+					// activate the inputs of the ALU but do not compute the ALU yet
+					cpu.ADDSB7 = true;
+					cpu.ADDSB06 = true;
+					cpu.SUMS = true;
+					cpu.DBADD = true;
+				}
 				if (cpu.execute == Instructions.SEC) {
 					// the cpu status register will set the carry flag to the value of bit 5 of the ir
 					cpu.ir5C = true;
@@ -222,6 +242,9 @@ public class Main {
 			// state T0
 			if (rcl.init_state) 
 			{
+				// for these instructions the PC does not increment to spread out a one byte
+				// instruction over two cycles without incorrectly fetching the second byte
+				// that does not exist for one byte instructions!
 				if ((cpu.execute == Instructions.SEC) || (cpu.execute == Instructions.CLC))
 				{
 					pcIncrement = false;

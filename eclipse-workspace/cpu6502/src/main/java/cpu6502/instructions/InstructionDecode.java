@@ -30,6 +30,9 @@ public class InstructionDecode {
 
 		case LDY_IMM:
 			return 2;
+			
+		case LDA_IMM:
+			return 2;
 
 		default:
 			throw new RuntimeException("Unknown instruction! " + instruction);

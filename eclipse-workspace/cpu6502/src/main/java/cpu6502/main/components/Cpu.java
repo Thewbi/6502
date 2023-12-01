@@ -11,6 +11,9 @@ public class Cpu {
 	// or as index pointers in a variety of addressing modes. The index registers can not be used for arithmetic operations.
 	public int x;
 	public int y;
+	
+	// the AC register
+	public int a;
 
 	// instruction register
 	public int ir;
@@ -34,6 +37,9 @@ public class Cpu {
 	// enable signal for the x and y register
 	public boolean SBX;
 	public boolean SBY;
+	
+	// AC register latches the value on the sbus
+	public boolean SBAC;
 
 	public byte[] codeSegment;
 
@@ -58,10 +64,16 @@ public class Cpu {
 	// SEC - set carry. For set carry, the random control logic will set the IR5/C signal
 	// The status register will read this signal and set the carry flag
 	public boolean ir5C;
+	
+	// connect databus to sbus
+	public boolean SBDB;
 
 	public void reset() {
 		x = 0;
 		y = 0;
+		
+		// the AC register
+		a = 0;
 
 		// instruction register
 		ir = 0;
@@ -86,6 +98,9 @@ public class Cpu {
 		SBX = false;
 		SBY = false;
 		
+		// AC register latches the value on the sbus
+		SBAC = false;
+		
 		ADDSB7 = false;
 		ADDSB06 = false;
 		SUMS = false;
@@ -93,12 +108,15 @@ public class Cpu {
 		DBADD = false;
 		
 		ir5C = false;
+		
+		SBDB = false;
 	}
 
 	public void dump() {
 		System.out.print(" db:" + String.format("%1$02X", (databus & 0xFF)));
 		System.out.print(" Fetch:" + String.format("%1$-6s", Instructions.getNameWithEmptyOption(fetch)));
 		System.out.print(" pc:" + String.format("%1$-4s", pc));
+		System.out.print(" a:" + Integer.toString(a, 16));
 		System.out.print(" x:" + Integer.toString(x, 16));
 		System.out.print(" y:" + Integer.toString(y, 16));
 		System.out.print(" Execute:" + String.format("%1$-6s", Instructions.getName(execute)));
