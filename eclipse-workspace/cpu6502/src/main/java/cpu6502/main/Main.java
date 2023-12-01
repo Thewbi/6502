@@ -182,12 +182,25 @@ public class Main {
 
 				// next state
 				rcl.state++;
+				
+				
+				
+				//
+				// output state (before reseting the signals)
+				//
+				
+				dump(cycleCount, cpu);
+				
+				
 
-				// reset random control logic signals
+				// reset data path / random control logic signals
 				cpu.SBX = false;
 				cpu.SBY = false;
+				cpu.SBAC = false;
 				cpu.ADDSB7 = false;
 				cpu.ADDSB06 = false;
+				
+				// reset PLA signals
 				cpu.SUMS = false;
 
 			} else if (rcl.state == 2) {
@@ -236,6 +249,15 @@ public class Main {
 
 				// back to state T1
 				rcl.state = 1;
+				
+				
+				
+				
+				//
+				// output state (before reseting the signals)
+				//
+				
+				dump(cycleCount, cpu);
 
 			}
 			
@@ -249,15 +271,21 @@ public class Main {
 				{
 					pcIncrement = false;
 				}
+				
+				
+				
+				//
+				// output state (before reseting the signals)
+				//
+				
+				dump(cycleCount, cpu);
 			}
 
 			
 			
-			//
-			// output state
-			//
 			
-			dump(cycleCount, cpu);
+			
+			
 
 			//
 			// increment program counter

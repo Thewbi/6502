@@ -72,7 +72,7 @@ public class Cpu {
 		x = 0;
 		y = 0;
 		
-		// the AC register
+		// the Accumulator (AC) register
 		a = 0;
 
 		// instruction register
@@ -93,22 +93,65 @@ public class Cpu {
 		// address registers
 		adl = 0;
 		adh = 0;
+		
+		//
+		// PLA
+		//
+		
+		SUMS = false;
+		
+		//
+		// Datapath Control (DPCtrl, DPControl aka. Random Control Logic) Signals
+		//
+		// Imagine a CPU of any sort be a toolbox of individual hardware components 
+		// that float around in the electronic silicon void. The sum of all these
+		// components is called the datapath. Dr. Hansons has displayed the datapath
+		// on the right hand side of his diagram. https://www.witwright.com/DonPub/6502-Block-Diagram.pdf
+		//
+		// When a instruction appears on the databus, 
+		// the microcode of the CPU has to wire up the correct components
+		// in it's toolbox/datapath to produce a configuration of the CPU on the fly that is 
+		// capable of correctly executing the instruction! It has to enable the correct
+		// bus lines and registers and ALU inputs and outputs and memory addresses so that
+		// the instruction is executed. Then the configuration is forgotten and the cycle
+		// repeat for the next instruction where the CPU is again configured differently 
+		// to adapt to the next requirements. A CPU is not a fixed machine, it is a flexible
+		// fabric that is shaped to adept to the current instruction. 
+		//
+		// The Datapath Control is the sum of all signals that can be used to configure 
+		// the datapath. Dr. Hanson has display the PLA and the Random Control Logic which
+		// shape the Datapath Control on the left-hand side of his diagram. https://www.witwright.com/DonPub/6502-Block-Diagram.pdf
+		//
+		// The names of the signals are choosen to be the same as in the visual 6502 emulator http://www.visual6502.org/JSSim/expert.html
+		// because it is easier to debug the CPU by comparing it to the visual 6502 which is a real running machine than comparing
+		// it to Dr.Hansons Diagramm which is only a static picture of the architecture.
+		// 
 
 		// enable signal for the x and y register
+		// Hanson: SB/X, Visual6502: SBX
 		SBX = false;
+		// Hanson: SB/Y, Visual6502: SBY
 		SBY = false;
 		
+		// sbus into accumulator register AC
+		//
 		// AC register latches the value on the sbus
+		// Hanson: AC/SB, Visual6502: SBAC
 		SBAC = false;
 		
+		// Adder Hold Register onto the SB (sbus)
+		//
+		// which bits go from the Adder Hold Register which will store the output of an ALU operation onto the sbus.
+		// The 6502 allows the user to transfer any combination of bit(7) and the group of bits (6-0)
+		// from the Adder Hold Register over onto the sbus. I do not know how this is used to our benefit just yet!
 		ADDSB7 = false;
 		ADDSB06 = false;
-		SUMS = false;
 		
 		DBADD = false;
 		
 		ir5C = false;
 		
+		// direct connection between the data bus and the sbus
 		SBDB = false;
 	}
 
@@ -131,6 +174,10 @@ public class Cpu {
 		System.out.print(interrupt ? "I" : "i");
 		System.out.print(zero ? "Z" : "z");
 		System.out.print(carry ? "C" : "c");
+		
+		System.out.print(String.format("%1$-20s", (" PLA: " + (SUMS ? "SUMS" : ""))));
+		
+		System.out.print(" DPCtrl: " + (SBX ? "SBX " : "") + (SBY ? "SBY" : "") + (SBAC ? "SBAC" : ""));
 	}
 
 }
