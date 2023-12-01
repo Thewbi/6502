@@ -29,24 +29,24 @@ public class Main {
 		// LDY #2
 		// LDA #3
 		
-//		// LDX #1 - load x with 1
-//		codeSegment[idx++] = (byte) 0xA2; // -94
-//		codeSegment[idx++] = (byte) 0x01; // 1
-//		// LDY #2 - load y with 2
-//		codeSegment[idx++] = (byte) 0xA0; // -96
-//		codeSegment[idx++] = (byte) 0x02; // 2
-//		// LDA #3 - load a with 3
-//		codeSegment[idx++] = (byte) 0xA9; // 
-//		codeSegment[idx++] = (byte) 0x03; // 3
+		// LDX #1 - load x with 1
+		codeSegment[idx++] = (byte) 0xA2; // -94
+		codeSegment[idx++] = (byte) 0x01; // 1
+		// LDY #2 - load y with 2
+		codeSegment[idx++] = (byte) 0xA0; // -96
+		codeSegment[idx++] = (byte) 0x02; // 2
+		// LDA #3 - load a with 3
+		codeSegment[idx++] = (byte) 0xA9; // 
+		codeSegment[idx++] = (byte) 0x03; // 3
 		
 		// Snippet - SEC, CLC - set and clear the carry flag
 		//
 		// https://www.pagetable.com/c64ref/6502/?tab=2#CLC
 		
-		// sec    - set the carry flag (1 -> C)
-		codeSegment[idx++] = (byte) 0x38;
-		// clc    - clear the carry flag (0 -> C)
-		codeSegment[idx++] = (byte) 0x18;
+//		// sec    - set the carry flag (1 -> C)
+//		codeSegment[idx++] = (byte) 0x38;
+//		// clc    - clear the carry flag (0 -> C)
+//		codeSegment[idx++] = (byte) 0x18;
 		
 		// Snippet - ADC application
 		//
@@ -65,8 +65,17 @@ public class Main {
 		//
 		// https://www.righto.com/2012/12/the-6502-overflow-flag-explained.html#:~:text=The%206502%20has%20an%208,binary%2C%20decimal%2C%20and%20hexadecimal.
 		// https://retro64.altervista.org/blog/an-introduction-to-6502-math-addiction-subtraction-and-more/
-//		codeSegment[idx++] = (byte) 0x69; // -94
+		
+//		// clc    - clear the carry flag (0 -> C)
+//		codeSegment[idx++] = (byte) 0x18;
+//
+//		// LDA #3 - load a with 1
+//		codeSegment[idx++] = (byte) 0xA9; // 
 //		codeSegment[idx++] = (byte) 0x01; // 1
+//		
+//		// adc 2
+//		codeSegment[idx++] = (byte) 0x69;
+//		codeSegment[idx++] = (byte) 0x02; // 2
 
 		//
 		// Components
@@ -103,9 +112,11 @@ public class Main {
 		boolean done = false;
 		int cycleCount = 0;
 		
-		//dump(cycleCount, cpu);
+		boolean dump = false;
 		
 		while (!done && cycleCount < 10) {
+			
+			dump = true;
 			
 			//
 			// ALU Logic
@@ -117,7 +128,7 @@ public class Main {
 			if (cpu.DBADD) {
 				alu.bInputRegister = cpu.databus;
 			}
-			alu.compute();
+			alu.compute(cpu.a);
 
 			// output the value from the adder hold register onto the sbus
 			if (cpu.ADDSB7 && cpu.ADDSB06) {
@@ -177,6 +188,14 @@ public class Main {
 						cpu.a = cpu.sb;
 					}
 				}
+				if (cpu.execute == Instructions.ADC_IMM) {
+					// activate input to the AC-Register
+					cpu.SBAC = true;
+					if (cpu.SBAC) {
+						// read current value from SB
+						cpu.a = cpu.sb;
+					}
+				}
 
 				cpu.ir = cpu.databus;
 
@@ -189,7 +208,10 @@ public class Main {
 				// output state (before reseting the signals)
 				//
 				
-				dump(cycleCount, cpu);
+				if (dump) {
+					dump(cycleCount, cpu);
+					dump = false;
+				}
 				
 				
 
@@ -238,6 +260,13 @@ public class Main {
 					cpu.SUMS = true;
 					cpu.DBADD = true;
 				}
+				if (cpu.execute == Instructions.ADC_IMM) {
+					// activate the inputs of the ALU but do not compute the ALU yet
+					cpu.ADDSB7 = true;
+					cpu.ADDSB06 = true;
+					cpu.SUMS = true;
+					cpu.DBADD = true;
+				}
 				if (cpu.execute == Instructions.SEC) {
 					// the cpu status register will set the carry flag to the value of bit 5 of the ir
 					cpu.ir5C = true;
@@ -257,7 +286,10 @@ public class Main {
 				// output state (before reseting the signals)
 				//
 				
-				dump(cycleCount, cpu);
+				if (dump) {
+					dump(cycleCount, cpu);
+					dump = false;
+				}
 
 			}
 			
@@ -278,7 +310,10 @@ public class Main {
 				// output state (before reseting the signals)
 				//
 				
-				dump(cycleCount, cpu);
+				if (dump) {
+					dump(cycleCount, cpu);
+					dump = false;
+				}
 			}
 
 			

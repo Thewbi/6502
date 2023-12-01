@@ -19,9 +19,9 @@ public class ArithmeticLogicUnit {
 		bInputRegister = 0;
 	}
 
-	public void compute() {
+	public void compute(int accumulator) {
 		if (sums) {
-			adderHoldRegister = aInputRegister + bInputRegister;
+			adderHoldRegister = accumulator + aInputRegister + bInputRegister;
 			sums = false;
 		}
 	}
