@@ -111,14 +111,14 @@ public class Main {
 		// a9 05 8d 01 02 
 		// a9 08 8d 02 02
 		
-//		// LDA #3 - load a with 1
-//		codeSegment[idx++] = (byte) 0xA9; // LDA_IMM
-//		codeSegment[idx++] = (byte) 0x01; // 1
-//		
-//		// STA $0200
-//		codeSegment[idx++] = (byte) 0x8d; // STA
-//		codeSegment[idx++] = (byte) 0x00; // 00
-//		codeSegment[idx++] = (byte) 0x02; // 02
+		// LDA #3 - load a with 1
+		codeSegment[idx++] = (byte) 0xA9; // LDA_IMM
+		codeSegment[idx++] = (byte) 0x01; // 1
+		
+		// STA $0200
+		codeSegment[idx++] = (byte) 0x8d; // STA
+		codeSegment[idx++] = (byte) 0x00; // 00
+		codeSegment[idx++] = (byte) 0x02; // 02
 
 		//
 		// Components
@@ -227,14 +227,14 @@ public class Main {
 						cpu.a = cpu.sb;
 					}
 				}
-				if (cpu.execute == Instructions.ADC_IMM) {
-					// activate input to the AC-Register
-					cpu.SBAC = true;
-					if (cpu.SBAC) {
-						// read current value from SB
-						cpu.a = cpu.sb;
-					}
-				}
+//				if (cpu.execute == Instructions.ADC_IMM) {
+//					// activate input to the AC-Register
+//					cpu.SBAC = true;
+//					if (cpu.SBAC) {
+//						// read current value from SB
+//						cpu.a = cpu.sb;
+//					}
+//				}
 
 				cpu.ir = cpu.databus;
 				
@@ -367,6 +367,21 @@ public class Main {
 	}
 
 	private static void executeT2(Cpu cpu) {
+		
+		
+		
+		if (cpu.execute == Instructions.ADC_IMM) {
+			// activate input to the AC-Register
+			cpu.SBAC = true;
+			if (cpu.SBAC) {
+				// read current value from SB
+				cpu.a = cpu.sb;
+			}
+		}
+			
+			
+			
+			
 		cpu.fetch = (byte) 0xFF;
 
 		// start the next instruction
