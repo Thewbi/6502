@@ -12,27 +12,56 @@ public class Cpu {
 	public int x;
 	public int y;
 	
-	// the AC register
+	/** the AC register */
 	public int a;
 
-	// instruction register
+	/** instruction register */
 	public int ir;
 	
-	// flags
+	/** address bus registers (high and low) */
+	public int abl;
+	public int abh;
+	
+	/** flags */
+	/** carry flag */
 	public boolean carry;
+	/** zero flag */
 	public boolean zero;
+	/** interrupt flag */
 	public boolean interrupt;
+	/** decimal flag */
 	public boolean decimal;
+	/** brk flag */
 	public boolean brk;
+	/** overflow flag */
 	public boolean overflow;
+	/** negative flag */
 	public boolean negative;
 
-	// program counter
+	/** program counter */
 	public int pc;
+	
+	/** these signals control if the PC is placed onto the address lines
+	 PC-low to address low */
+	public boolean PCL_ADL;
+	/** PC-high to address high */
+	public boolean PCH_ADH;
 
-	// address registers
+	/** address registers (the PC is split and stored into these registers) */
 	public int adl;
 	public int adh;
+	
+	/** data output register (dor)
+	This register latches the value currently available on the databus in every phase 2
+	Since this emulator has no phases, it is assigned db in every state.
+	This register is connected to the memory input and output line (d0 - d7) in Dr. Hansons diagram.
+    For instructions that access memory such as STA absolute, the value stored in the Accumulator (A) register
+	is moved into the dor register and from there is it written into memory at the address stored in 
+	adl and adh. Memory addresses are 16 bit even in the 8-bit 6502, therefore adl and adh are used to 
+	construct a 16 bit address.
+	 * 
+	 */
+	public int dor = 0;
 
 	// enable signal for the x and y register
 	public boolean SBX;
@@ -44,33 +73,53 @@ public class Cpu {
 	public byte[] codeSegment;
 
 	public byte fetch;
-	//public byte execute;
 	public Instructions execute;
 	
-	// data bus and s bus ???
+	/** data bus */
 	public int databus;
+	public int oldDatabus;
+	
+	/** sbus ??? */
 	public int sb;
 	
-	// adder hold register will output to SB
+	/** adder hold register will output to SB
+	 */
 	public boolean ADDSB7;
 	public boolean ADDSB06;
 	
-	// input to the ALU, ALU will perform summation
+	/** input to the ALU, ALU will perform summation
+	 */
 	public boolean SUMS;
 	
-	// input to the ALU b input register, when DBADD is true, the ALU b input register will latch the databus (See Dr. Hansons Diagram)
+	/** input to the ALU b input register, when DBADD is true, the ALU b input register will latch the databus (See Dr. Hansons Diagram)
+	 */
 	public boolean DBADD;
 	
-	// SEC - set carry and Clear Carry. For set carry, the random control logic will set the IR5/C signal
-	// The status register will read this signal and set the carry flag
+	/** SEC - set carry and Clear Carry. For set carry, the random control logic will set the IR5/C signal
+	 The status register will read this signal and set the carry flag
+	 */
 	public boolean ir5C;
 	
-	// SEC - set interrupt and clear interrupt. For set interrupt and clear interrupt, the random control logic will set the IR5/C signal
-	// The status register will read this signal and set the interrupt flag
+	/** SEC - set interrupt and clear interrupt. For set interrupt and clear interrupt, the random control logic will set the IR5/C signal
+	 The status register will read this signal and set the interrupt flag
+	 */
 	public boolean ir5I;
 	
-	// connect databus to sbus
+	/** connect databus to sbus*/
 	public boolean SBDB;
+	
+	/** make the Address Bus Low (ABL) register latch the value located on the ADL (Address Data Line???) bus line in Dr. Hansons Diagram
+	 This is used to store the absolute address encoded inside a instruction that accesses memory such as (STA #) into
+	 the address bus registers (ABL and ABH) so that the CPU learns which memory cell to access
+	 */
+	public boolean ADL_ABL;
+	
+	/** make the Address Bus High (ABH) register latch the value located on the ADH (Address Data Line???) bus line in Dr. Hansons Diagram
+	 This is used to store the absolute address encoded inside a instruction that accesses memory such as (STA #) into
+	the address bus registers (ABL and ABH) so that the CPU learns which memory cell to access
+	*/
+	public boolean ADH_ABH;
+	
 
 	public void reset() {
 		x = 0;
@@ -93,10 +142,16 @@ public class Cpu {
 
 		// program counter
 		pc = 0;
+		
+		abl = 0;
+		abh = 0;
 
 		// address registers
 		adl = 0;
 		adh = 0;
+		
+		// data output register (dor)
+		dor = 0;
 		
 		//
 		// PLA
@@ -107,6 +162,7 @@ public class Cpu {
 		//
 		// Datapath Control (DPCtrl, DPControl aka. Random Control Logic) Signals
 		//
+		
 		// Imagine a CPU of any sort be a toolbox of individual hardware components 
 		// that float around in the electronic silicon void. The sum of all these
 		// components is called the datapath. Dr. Hansons has displayed the datapath
@@ -158,6 +214,12 @@ public class Cpu {
 		
 		// direct connection between the data bus and the sbus
 		SBDB = false;
+		
+		ADL_ABL = true;
+		ADH_ABH = true;
+		
+		PCL_ADL = true;
+		PCH_ADH = true;
 	}
 
 	public void dump() {
@@ -167,6 +229,10 @@ public class Cpu {
 		System.out.print(" a:" + Integer.toString(a, 16));
 		System.out.print(" x:" + Integer.toString(x, 16));
 		System.out.print(" y:" + Integer.toString(y, 16));
+		// address bus registers (!= adl = address line registers)
+		System.out.print(" abl:" + String.format("%1$02X", (abl & 0xFF)));
+		System.out.print(" abh:" + String.format("%1$02X", (abh & 0xFF)));
+		System.out.print(" dor:" + String.format("%1$02X", (dor & 0xFF)));
 		System.out.print(" Execute:" + String.format("%1$-6s", Instructions.getName(execute)));
 		
 		// flags
@@ -182,7 +248,7 @@ public class Cpu {
 		
 		System.out.print(String.format("%1$-20s", (" PLA: " + (SUMS ? "SUMS" : ""))));
 		
-		System.out.print(" DPCtrl: " + (SBX ? "SBX " : "") + (SBY ? "SBY" : "") + (SBAC ? "SBAC" : ""));
+		System.out.print(" DPCtrl: " + (PCL_ADL ? "PCL_ADL " : "") + (PCH_ADH ? "PCH_ADH " : "") + (ADL_ABL ? "ADL_ABL " : "") + (ADH_ABH ? "ADH_ABH " : "") + (SBX ? "SBX " : "") + (SBY ? "SBY" : "") + (SBAC ? "SBAC" : ""));
 	}
 
 }

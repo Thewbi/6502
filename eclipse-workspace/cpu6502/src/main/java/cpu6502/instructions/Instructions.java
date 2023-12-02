@@ -21,7 +21,7 @@ public enum Instructions {
 	SEI(0x78),
 	
 	/** 0x8D */
-	STA_IMM(0x8D),
+	STA_ABS(0x8D),
 	
 	/** 0xA0 */
 	LDY_IMM(0xA0),
@@ -138,7 +138,7 @@ public enum Instructions {
 			return "SEI";
 			
 		/** 0x8D */
-		case STA_IMM:
+		case STA_ABS:
 			return "STA #";
 
 		/** 0xA0 */
@@ -181,7 +181,7 @@ public enum Instructions {
 			return SEI;
 			
 		case 0x8D:
-			return STA_IMM;
+			return STA_ABS;
 
 		case 0xA0:
 			return LDY_IMM;

@@ -46,13 +46,37 @@ public class RandomControlLogic {
 		case T2:
 			if (3 == cycleCount) {
 				state = RandomControlLogicState.T0;
+			} else {
+				state = RandomControlLogicState.T3;
 			}
 			break;
 
 		case T3:
 			if (4 == cycleCount) {
 				state = RandomControlLogicState.T0;
+			} else {
+				state = RandomControlLogicState.T4;
 			}
+			break;
+			
+		case T4:
+			if (5 == cycleCount) {
+				state = RandomControlLogicState.T0;
+			} else {
+				state = RandomControlLogicState.T5;
+			}
+			break;
+			
+		case T5:
+			if (6 == cycleCount) {
+				state = RandomControlLogicState.T0;
+			} else {
+				state = RandomControlLogicState.T6;
+			}
+			break;
+			
+		case T6:
+			state = RandomControlLogicState.T0;
 			break;
 
 		default:
@@ -83,6 +107,18 @@ public class RandomControlLogic {
 
 		case T3:
 			System.out.print(String.format("%1$-6s", "T3"));
+			break;
+			
+		case T4:
+			System.out.print(String.format("%1$-6s", "T4"));
+			break;
+			
+		case T5:
+			System.out.print(String.format("%1$-6s", "T5"));
+			break;
+			
+		case T6:
+			System.out.print(String.format("%1$-6s", "T6"));
 			break;
 
 		default:

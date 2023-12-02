@@ -1,6 +1,5 @@
 package cpu6502.main;
 
-import cpu6502.instructions.InstructionDecode;
 import cpu6502.instructions.Instructions;
 import cpu6502.main.components.ArithmeticLogicUnit;
 import cpu6502.main.components.Cpu;
@@ -70,14 +69,14 @@ public class Main {
 		// https://www.righto.com/2012/12/the-6502-overflow-flag-explained.html#:~:text=The%206502%20has%20an%208,binary%2C%20decimal%2C%20and%20hexadecimal.
 		// https://retro64.altervista.org/blog/an-introduction-to-6502-math-addiction-subtraction-and-more/
 
-//		// clc    - clear the carry flag (0 -> C)
+//		// CLC    - clear the carry flag (0 -> C)
 //		codeSegment[idx++] = (byte) 0x18;
 //
 //		// LDA #3 - load a with 1
 //		codeSegment[idx++] = (byte) 0xA9; // 
 //		codeSegment[idx++] = (byte) 0x01; // 1
 //		
-//		// adc 2
+//		// ADC 2
 //		codeSegment[idx++] = (byte) 0x69;
 //		codeSegment[idx++] = (byte) 0x02; // 2
 
@@ -113,12 +112,12 @@ public class Main {
 		
 		// LDA #3 - load a with 1
 		codeSegment[idx++] = (byte) 0xA9; // LDA_IMM
-		codeSegment[idx++] = (byte) 0x01; // 1
+		codeSegment[idx++] = (byte) 0x0A; // 10dec = 0x0A
 		
 		// STA $0200
 		codeSegment[idx++] = (byte) 0x8d; // STA
-		codeSegment[idx++] = (byte) 0x00; // 00
-		codeSegment[idx++] = (byte) 0x02; // 02
+		codeSegment[idx++] = (byte) 0x12; // 00
+		codeSegment[idx++] = (byte) 0x34; // 02
 
 		//
 		// Components
@@ -127,8 +126,6 @@ public class Main {
 		RandomControlLogic rcl = new RandomControlLogic();
 
 		ArithmeticLogicUnit alu = new ArithmeticLogicUnit();
-
-		InstructionDecode instructionDecode = new InstructionDecode();
 
 		Cpu cpu = new Cpu();
 		cpu.reset();
@@ -193,12 +190,49 @@ public class Main {
 				cpu.ir5I = false;
 			}
 
+			cpu.oldDatabus = cpu.databus;
 			cpu.databus = codeSegment[cpu.pc];
+			
+			if (rcl.state == RandomControlLogicState.T0) {
+				
+				if (cpu.execute == Instructions.STA_ABS) {
+					// the program counter is not placed onto the address lines! (check visual6502 with: a9 01 8d 00 02)
+					cpu.PCL_ADL = false;
+					cpu.PCH_ADH = false;
+				}
+				if (cpu.ADH_ABH) {
+					// load address bus high register to store a memory address
+					cpu.abh = cpu.oldDatabus;
+				}
+				cpu.dor = cpu.a;
+				
+				if (cpu.execute == Instructions.STA_ABS) {
+					
+					int address = (cpu.abl << 8) + cpu.abh;
+					
+					System.out.println("Storing the value " + String.format("%1$02X", (cpu.dor & 0xFF)) + " at the address: " + String.format("%1$04X", (address & 0xFFFF)));
+					
+				}
+				
+				//
+				// output state (before reseting the signals)
+				//
 
-//			rcl.init_state = false;
+				if (dump) {
+					dump(cycleCount, rcl, cpu);
+					dump = false;
+				}
+				
+				//
+				// State Machine
+				//
 
-			//if ((rcl.state == RandomControlLogicState.T1) || (rcl.state == RandomControlLogicState.T0_T2)) {
-			if (rcl.state == RandomControlLogicState.T1) {
+				rcl.transitionToNextState(cpu.execute);
+
+			} else if (rcl.state == RandomControlLogicState.T1) {
+				
+				cpu.PCL_ADL = true;
+				cpu.PCH_ADH = true;
 
 				cpu.fetch = codeSegment[cpu.pc];
 
@@ -227,14 +261,15 @@ public class Main {
 						cpu.a = cpu.sb;
 					}
 				}
-//				if (cpu.execute == Instructions.ADC_IMM) {
-//					// activate input to the AC-Register
-//					cpu.SBAC = true;
-//					if (cpu.SBAC) {
-//						// read current value from SB
-//						cpu.a = cpu.sb;
-//					}
-//				}
+				
+				if (cpu.ADL_ABL) {
+					// load address bus low register to store a memory address
+					cpu.abl = cpu.databus;
+				}
+				if (cpu.ADH_ABH) {
+					// load address bus high register to store a memory address
+					cpu.abh = cpu.databus;
+				}
 
 				cpu.ir = cpu.databus;
 				
@@ -256,9 +291,6 @@ public class Main {
 				//
 				// advance to the next state
 				//
-
-				// next state
-				//rcl.state++;
 				
 				//rcl.transitionToNextState(cpu.execute);
 				rcl.transitionToNextState(Instructions.fromValue(cpu.ir));
@@ -272,6 +304,10 @@ public class Main {
 				cpu.SBAC = false;
 				cpu.ADDSB7 = false;
 				cpu.ADDSB06 = false;
+				cpu.ADL_ABL = true;
+				cpu.ADH_ABH = true;
+				cpu.PCL_ADL = true;
+				cpu.PCH_ADH = true;
 
 				// reset PLA signals
 				cpu.SUMS = false;
@@ -299,9 +335,15 @@ public class Main {
 			{
 				executeT2(cpu);
 				
-				// for these instructions the PC does not increment to spread out a one byte
+				// Every instruction has at least two cycles. For one byte instructions, a single
+				// pc increment and a single fetch suffices. A PC increment or fetching the next
+				// byte is incorrect for single byte instructions!
+				// 
+				// For single byte instructions the PC does not get incremented to spread out a one byte
 				// instruction over two cycles without incorrectly fetching the second byte
-				// that does not exist for one byte instructions!
+				// that does not exist for one byte instructions! If the PC was incorrectly incremented
+				// and the next byte was fetched, then the CPU would point onto an instruction which
+				// is not executed in the current cycle and the internal state is incorrect!
 				if ((cpu.execute == Instructions.SEC) || (cpu.execute == Instructions.CLC)
 						|| (cpu.execute == Instructions.SEI) || (cpu.execute == Instructions.CLI)) {
 					pcIncrement = false;
@@ -322,37 +364,107 @@ public class Main {
 				
 				rcl.transitionToNextState(cpu.execute);
 			}
+			else if (rcl.state == RandomControlLogicState.T3)
+			{
+				if (cpu.execute == Instructions.STA_ABS) {
+					// the program counter is not placed onto the address lines! (check visual6502 with: a9 01 8d 00 02)
+					cpu.PCL_ADL = false;
+					cpu.PCH_ADH = false;
+				}
+				if (cpu.ADL_ABL) {
+					// load address bus low register to store a memory address
+					cpu.abl = cpu.oldDatabus;
+				}
+//				if (cpu.ADH_ABH) {
+//					// load address bus high register to store a memory address
+//					cpu.abh = cpu.oldDatabus;
+//				}
+				
+				//
+				// output state
+				//
 
-//			// state T0
-//			//if (rcl.init_state) {
-//			if (rcl.state == RandomControlLogicState.T0_T2) {
-//				
-//				// for these instructions the PC does not increment to spread out a one byte
-//				// instruction over two cycles without incorrectly fetching the second byte
-//				// that does not exist for one byte instructions!
-//				if ((cpu.execute == Instructions.SEC) || (cpu.execute == Instructions.CLC)
-//						|| (cpu.execute == Instructions.SEI) || (cpu.execute == Instructions.CLI)) {
-//					pcIncrement = false;
-//				}
-//
-//				//
-//				// output state (before reseting the signals)
-//				//
-//
-//				if (dump) {
-//					dump(cycleCount, rcl, cpu);
-//					dump = false;
-//				}
-//			}
+				if (dump) {
+					dump(cycleCount, rcl, cpu);
+					dump = false;
+				}
+
+				//
+				// State Machine
+				//
+				
+				rcl.transitionToNextState(cpu.execute);
+			}
+			else if (rcl.state == RandomControlLogicState.T4)
+			{
+				//
+				// output state
+				//
+
+				if (dump) {
+					dump(cycleCount, rcl, cpu);
+					dump = false;
+				}
+
+				//
+				// State Machine
+				//
+				
+				rcl.transitionToNextState(cpu.execute);
+			}
+			else if (rcl.state == RandomControlLogicState.T5)
+			{
+				//
+				// output state
+				//
+
+				if (dump) {
+					dump(cycleCount, rcl, cpu);
+					dump = false;
+				}
+
+				//
+				// State Machine
+				//
+				
+				rcl.transitionToNextState(cpu.execute);
+			}
+			else if (rcl.state == RandomControlLogicState.T6)
+			{
+				//
+				// output state
+				//
+
+				if (dump) {
+					dump(cycleCount, rcl, cpu);
+					dump = false;
+				}
+
+				//
+				// State Machine
+				//
+				
+				rcl.transitionToNextState(cpu.execute);
+			}
+			else
+			{
+				throw new RuntimeException("Unknown state! " + rcl.state);
+			}
 
 			//
 			// increment program counter
 			//
 
 			if (pcIncrement) {
+				
 				cpu.pc += 1;
-				cpu.adl = (byte) (cpu.pc & 0xFF);
-				cpu.adh = (byte) ((cpu.pc >> 8) & 0xFF);
+				
+				if (cpu.PCL_ADL) {
+					cpu.adl = (byte) (cpu.pc & 0xFF);
+				}
+				if (cpu.PCH_ADH) {
+					cpu.adh = (byte) ((cpu.pc >> 8) & 0xFF);
+				}
 			}
 
 			pcIncrement = true;
@@ -368,8 +480,6 @@ public class Main {
 
 	private static void executeT2(Cpu cpu) {
 		
-		
-		
 		if (cpu.execute == Instructions.ADC_IMM) {
 			// activate input to the AC-Register
 			cpu.SBAC = true;
@@ -379,43 +489,45 @@ public class Main {
 			}
 		}
 			
-			
-			
-			
 		cpu.fetch = (byte) 0xFF;
 
 		// start the next instruction
 		cpu.execute = Instructions.fromValue(cpu.ir);
 
-//		// if the state machine is on the last cycle_count of the current instruction
-//		if (rcl.state == instructionDecode.getCycleCount(cpu.execute)) {
-//
-//			// add T0 cycle for the next instruction
-//			rcl.init_state = true;
-//		}
-		
-		//rcl.transitionToNextState(cpu.execute);
-
+		if (cpu.execute == Instructions.BRK) {
+			// latch data into the address bus registers so the CPU learns about an address (for potential memory access)
+//			cpu.ADL_ABL = true;
+//			cpu.ADH_ABH = true;
+		}
 		if (cpu.execute == Instructions.LDX_IMM) {
 			// activate the inputs of the ALU but do not compute the ALU yet
+			// Computing and further processing of the result is done in cycle T1 where
+			// the SBX, SBY signals are set to latch the value into the correct target registers.
 			cpu.ADDSB7 = true;
 			cpu.ADDSB06 = true;
 			cpu.SUMS = true;
 			cpu.DBADD = true;
 		}
 		if (cpu.execute == Instructions.LDY_IMM) {
-			// activate the inputs of the ALU but do not compute the ALU yet
+			// activate the inputs of the ALU but do not compute the ALU yet!
+			// Computing and further processing of the result is done in cycle T1 where
+			// the SBX, SBY signals are set to latch the value into the correct target registers.
 			cpu.ADDSB7 = true;
 			cpu.ADDSB06 = true;
 			cpu.SUMS = true;
 			cpu.DBADD = true;
 		}
 		if (cpu.execute == Instructions.LDA_IMM) {
-			// activate the inputs of the ALU but do not compute the ALU yet
+			// activate the inputs of the ALU but do not compute the ALU yet!
+			// Computing and further processing of the result is done in cycle T1 where
+			// the SBX, SBY signals are set to latch the value into the correct target registers.
 			cpu.ADDSB7 = true;
 			cpu.ADDSB06 = true;
 			cpu.SUMS = true;
 			cpu.DBADD = true;
+			// latch data into the address bus registers so the CPU learns about an address (for potential memory access)
+//			cpu.ADL_ABL = true;
+//			cpu.ADH_ABH = true;
 		}
 		if (cpu.execute == Instructions.ADC_IMM) {
 			// activate the inputs of the ALU but do not compute the ALU yet

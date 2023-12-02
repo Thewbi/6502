@@ -40,7 +40,7 @@ public class InstructionDecode {
 			return 2;
 			
 		/** 0x8D */
-		case STA_IMM:
+		case STA_ABS:
 			return 4;
 			
 		/** 0xA0 */
