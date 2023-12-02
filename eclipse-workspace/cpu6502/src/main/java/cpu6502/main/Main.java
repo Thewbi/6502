@@ -5,6 +5,7 @@ import cpu6502.instructions.Instructions;
 import cpu6502.main.components.ArithmeticLogicUnit;
 import cpu6502.main.components.Cpu;
 import cpu6502.main.components.RandomControlLogic;
+import cpu6502.main.components.RandomControlLogicState;
 
 public class Main {
 
@@ -92,10 +93,32 @@ public class Main {
 		// Operation: 1 -> I
 		// initializes the interrupt disable to a 1
 
-		// CLI
-		codeSegment[idx++] = (byte) 0x58;
-		// SEI
-		codeSegment[idx++] = (byte) 0x78;
+//		// CLI
+//		codeSegment[idx++] = (byte) 0x58;
+//		// SEI
+//		codeSegment[idx++] = (byte) 0x78;
+		
+		// Snippet - https://skilldrick.github.io/easy6502/
+		//
+		// LDA #$01
+		// STA $0200
+		// LDA #$05
+		// STA $0201
+		// LDA #$08
+		// STA $0202
+		//
+		// a9 01 8d 00 02 
+		// a9 05 8d 01 02 
+		// a9 08 8d 02 02
+		
+//		// LDA #3 - load a with 1
+//		codeSegment[idx++] = (byte) 0xA9; // LDA_IMM
+//		codeSegment[idx++] = (byte) 0x01; // 1
+//		
+//		// STA $0200
+//		codeSegment[idx++] = (byte) 0x8d; // STA
+//		codeSegment[idx++] = (byte) 0x00; // 00
+//		codeSegment[idx++] = (byte) 0x02; // 02
 
 		//
 		// Components
@@ -172,9 +195,10 @@ public class Main {
 
 			cpu.databus = codeSegment[cpu.pc];
 
-			rcl.init_state = false;
+//			rcl.init_state = false;
 
-			if (rcl.state == 1) {
+			//if ((rcl.state == RandomControlLogicState.T1) || (rcl.state == RandomControlLogicState.T0_T2)) {
+			if (rcl.state == RandomControlLogicState.T1) {
 
 				cpu.fetch = codeSegment[cpu.pc];
 
@@ -213,18 +237,34 @@ public class Main {
 				}
 
 				cpu.ir = cpu.databus;
-
-				// next state
-				rcl.state++;
-
+				
+				
+				
+				
 				//
 				// output state (before reseting the signals)
 				//
 
 				if (dump) {
-					dump(cycleCount, cpu);
+					dump(cycleCount, rcl, cpu);
 					dump = false;
 				}
+				
+				
+				
+				
+				//
+				// advance to the next state
+				//
+
+				// next state
+				//rcl.state++;
+				
+				//rcl.transitionToNextState(cpu.execute);
+				rcl.transitionToNextState(Instructions.fromValue(cpu.ir));
+				
+
+				
 
 				// reset data path / random control logic signals
 				cpu.SBX = false;
@@ -236,85 +276,29 @@ public class Main {
 				// reset PLA signals
 				cpu.SUMS = false;
 
-			} else if (rcl.state == 2) {
+			} else if (rcl.state == RandomControlLogicState.T2) {
 
-				cpu.fetch = (byte) 0xFF;
-
-				// start the next instruction
-				cpu.execute = Instructions.fromValue(cpu.ir);
-
-				// if the state machine is on the last cycle_count of the current instruction
-				if (rcl.state == instructionDecode.getCycleCount(cpu.execute)) {
-
-					// add T0 cycle for the next instruction
-					rcl.init_state = true;
-				}
-
-				if (cpu.execute == Instructions.LDX_IMM) {
-					// activate the inputs of the ALU but do not compute the ALU yet
-					cpu.ADDSB7 = true;
-					cpu.ADDSB06 = true;
-					cpu.SUMS = true;
-					cpu.DBADD = true;
-				}
-				if (cpu.execute == Instructions.LDY_IMM) {
-					// activate the inputs of the ALU but do not compute the ALU yet
-					cpu.ADDSB7 = true;
-					cpu.ADDSB06 = true;
-					cpu.SUMS = true;
-					cpu.DBADD = true;
-				}
-				if (cpu.execute == Instructions.LDA_IMM) {
-					// activate the inputs of the ALU but do not compute the ALU yet
-					cpu.ADDSB7 = true;
-					cpu.ADDSB06 = true;
-					cpu.SUMS = true;
-					cpu.DBADD = true;
-				}
-				if (cpu.execute == Instructions.ADC_IMM) {
-					// activate the inputs of the ALU but do not compute the ALU yet
-					cpu.ADDSB7 = true;
-					cpu.ADDSB06 = true;
-					cpu.SUMS = true;
-					cpu.DBADD = true;
-				}
-				if (cpu.execute == Instructions.SEC) {
-					// the cpu status register will set the carry flag to the value of bit 5 of the
-					// ir
-					cpu.ir5C = true;
-				}
-				if (cpu.execute == Instructions.CLC) {
-					// the cpu status register will set the carry flag to the value of bit 5 of the
-					// ir
-					cpu.ir5C = true;
-				}
-				if (cpu.execute == Instructions.CLI) {
-					// the cpu status register will set the interrupt flag to the value of bit 5 of the
-					// ir
-					cpu.ir5I = true;
-				}
-				if (cpu.execute == Instructions.SEI) {
-					// the cpu status register will set the interrupt flag to the value of bit 5 of the
-					// ir
-					cpu.ir5I = true;
-				}
-
-				// back to state T1
-				rcl.state = 1;
-
+				executeT2(cpu);
+				
 				//
 				// output state (before reseting the signals)
 				//
 
 				if (dump) {
-					dump(cycleCount, cpu);
+					dump(cycleCount, rcl, cpu);
 					dump = false;
 				}
+				
+				//
+				// State Machine
+				//
 
-			}
-
-			// state T0
-			if (rcl.init_state) {
+				rcl.transitionToNextState(cpu.execute);
+			} 
+			else if (rcl.state == RandomControlLogicState.T0_T2)
+			{
+				executeT2(cpu);
+				
 				// for these instructions the PC does not increment to spread out a one byte
 				// instruction over two cycles without incorrectly fetching the second byte
 				// that does not exist for one byte instructions!
@@ -322,16 +306,44 @@ public class Main {
 						|| (cpu.execute == Instructions.SEI) || (cpu.execute == Instructions.CLI)) {
 					pcIncrement = false;
 				}
-
+				
 				//
-				// output state (before reseting the signals)
+				// output state
 				//
 
 				if (dump) {
-					dump(cycleCount, cpu);
+					dump(cycleCount, rcl, cpu);
 					dump = false;
 				}
+
+				//
+				// State Machine
+				//
+				
+				rcl.transitionToNextState(cpu.execute);
 			}
+
+//			// state T0
+//			//if (rcl.init_state) {
+//			if (rcl.state == RandomControlLogicState.T0_T2) {
+//				
+//				// for these instructions the PC does not increment to spread out a one byte
+//				// instruction over two cycles without incorrectly fetching the second byte
+//				// that does not exist for one byte instructions!
+//				if ((cpu.execute == Instructions.SEC) || (cpu.execute == Instructions.CLC)
+//						|| (cpu.execute == Instructions.SEI) || (cpu.execute == Instructions.CLI)) {
+//					pcIncrement = false;
+//				}
+//
+//				//
+//				// output state (before reseting the signals)
+//				//
+//
+//				if (dump) {
+//					dump(cycleCount, rcl, cpu);
+//					dump = false;
+//				}
+//			}
 
 			//
 			// increment program counter
@@ -354,9 +366,77 @@ public class Main {
 
 	}
 
-	private static void dump(int cycle, Cpu cpu) {
+	private static void executeT2(Cpu cpu) {
+		cpu.fetch = (byte) 0xFF;
+
+		// start the next instruction
+		cpu.execute = Instructions.fromValue(cpu.ir);
+
+//		// if the state machine is on the last cycle_count of the current instruction
+//		if (rcl.state == instructionDecode.getCycleCount(cpu.execute)) {
+//
+//			// add T0 cycle for the next instruction
+//			rcl.init_state = true;
+//		}
+		
+		//rcl.transitionToNextState(cpu.execute);
+
+		if (cpu.execute == Instructions.LDX_IMM) {
+			// activate the inputs of the ALU but do not compute the ALU yet
+			cpu.ADDSB7 = true;
+			cpu.ADDSB06 = true;
+			cpu.SUMS = true;
+			cpu.DBADD = true;
+		}
+		if (cpu.execute == Instructions.LDY_IMM) {
+			// activate the inputs of the ALU but do not compute the ALU yet
+			cpu.ADDSB7 = true;
+			cpu.ADDSB06 = true;
+			cpu.SUMS = true;
+			cpu.DBADD = true;
+		}
+		if (cpu.execute == Instructions.LDA_IMM) {
+			// activate the inputs of the ALU but do not compute the ALU yet
+			cpu.ADDSB7 = true;
+			cpu.ADDSB06 = true;
+			cpu.SUMS = true;
+			cpu.DBADD = true;
+		}
+		if (cpu.execute == Instructions.ADC_IMM) {
+			// activate the inputs of the ALU but do not compute the ALU yet
+			cpu.ADDSB7 = true;
+			cpu.ADDSB06 = true;
+			cpu.SUMS = true;
+			cpu.DBADD = true;
+		}
+		if (cpu.execute == Instructions.SEC) {
+			// the cpu status register will set the carry flag to the value of bit 5 of the
+			// ir
+			cpu.ir5C = true;
+		}
+		if (cpu.execute == Instructions.CLC) {
+			// the cpu status register will set the carry flag to the value of bit 5 of the
+			// ir
+			cpu.ir5C = true;
+		}
+		if (cpu.execute == Instructions.CLI) {
+			// the cpu status register will set the interrupt flag to the value of bit 5 of the
+			// ir
+			cpu.ir5I = true;
+		}
+		if (cpu.execute == Instructions.SEI) {
+			// the cpu status register will set the interrupt flag to the value of bit 5 of the
+			// ir
+			cpu.ir5I = true;
+		}
+	}
+
+	private static void dump(int cycle, RandomControlLogic rcl, Cpu cpu) {
 		// the - in -4 left aligns the string
 		System.out.print("cycle:" + String.format("%1$-4s", cycle));
+		
+		rcl.dump();
+		
 		cpu.dump();
 
 		System.out.println("");

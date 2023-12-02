@@ -20,6 +20,9 @@ public enum Instructions {
 	/** 0x78 */
 	SEI(0x78),
 	
+	/** 0x8D */
+	STA_IMM(0x8D),
+	
 	/** 0xA0 */
 	LDY_IMM(0xA0),
 
@@ -57,6 +60,7 @@ public enum Instructions {
 		case 0x58: // CLI
 		case 0x69: // ADC_IMM
 		case 0x78: // SEI
+		case 0x8D: // STA_IMM
 		case 0xA0: // LDY_IMM
 		case 0xA2: // LDX_IMM
 		case 0xA9: // LDA_IMM
@@ -87,6 +91,9 @@ public enum Instructions {
 			
 		case 0x78:
 			return "SEI";
+			
+		case 0x8D:
+			return "STA #";
 
 		case 0xA0:
 			return "LDY #";
@@ -129,6 +136,10 @@ public enum Instructions {
 		/** 0x78 */
 		case SEI:
 			return "SEI";
+			
+		/** 0x8D */
+		case STA_IMM:
+			return "STA #";
 
 		/** 0xA0 */
 		case LDY_IMM:
@@ -168,6 +179,9 @@ public enum Instructions {
 			
 		case 0x78:
 			return SEI;
+			
+		case 0x8D:
+			return STA_IMM;
 
 		case 0xA0:
 			return LDY_IMM;
