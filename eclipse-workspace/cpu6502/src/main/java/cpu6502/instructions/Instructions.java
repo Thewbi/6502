@@ -23,6 +23,9 @@ public enum Instructions {
 	/** 0x8D */
 	STA_ABS(0x8D),
 	
+	/** 0xE8 - INX - Increment Index Register X By One */
+	INX(0xE8),
+	
 	/** 0xA0 */
 	LDY_IMM(0xA0),
 
@@ -31,6 +34,9 @@ public enum Instructions {
 	
 	/** 0xA9 */
 	LDA_IMM(0xA9),
+	
+	/** 0xAA - TAX - Transfer Accumulator To Index X */
+	TAX(0xAA),
 
 	/** 0xFF */
 	UNKNOWN(0xFF);
@@ -61,9 +67,11 @@ public enum Instructions {
 		case 0x69: // ADC_IMM
 		case 0x78: // SEI
 		case 0x8D: // STA_IMM
+		case 0xE8: // INX
 		case 0xA0: // LDY_IMM
 		case 0xA2: // LDX_IMM
 		case 0xA9: // LDA_IMM
+		case 0xAA: // TAX
 			return true;
 		default:
 			return false;
@@ -94,6 +102,9 @@ public enum Instructions {
 			
 		case 0x8D:
 			return "STA #";
+			
+		case 0xE8:
+			return "INX";
 
 		case 0xA0:
 			return "LDY #";
@@ -103,6 +114,9 @@ public enum Instructions {
 			
 		case 0xA9:
 			return "LDA #";
+			
+		case 0xAA:
+			return "TAX";
 
 		default:
 			throw new RuntimeException("Unknown instruction! numVal:" + numVal);
@@ -140,6 +154,10 @@ public enum Instructions {
 		/** 0x8D */
 		case STA_ABS:
 			return "STA #";
+			
+		/** 0xE8 */
+		case INX:
+			return "INX";
 
 		/** 0xA0 */
 		case LDY_IMM:
@@ -152,6 +170,10 @@ public enum Instructions {
 		/** 0xA9 */
 		case LDA_IMM:
 			return "LDA #";
+			
+		/** 0xAA */
+		case TAX:
+			return "TAX";
 
 		default:
 			throw new RuntimeException("Unknown instruction! instruction: " + instruction);
@@ -182,6 +204,9 @@ public enum Instructions {
 			
 		case 0x8D:
 			return STA_ABS;
+			
+		case 0xE8:
+			return INX;
 
 		case 0xA0:
 			return LDY_IMM;
@@ -191,6 +216,9 @@ public enum Instructions {
 			
 		case 0xA9:
 			return LDA_IMM;
+			
+		case 0xAA:
+			return TAX;
 
 		default:
 			throw new RuntimeException("Unknown instruction! numVal: " + numVal);

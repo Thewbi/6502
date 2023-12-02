@@ -43,6 +43,10 @@ public class InstructionDecode {
 		case STA_ABS:
 			return 4;
 			
+		/** 0xE8 */
+		case INX:
+			return 2;
+			
 		/** 0xA0 */
 		case LDY_IMM:
 			return 2;
@@ -53,6 +57,10 @@ public class InstructionDecode {
 		
 		/** 0xA9 */
 		case LDA_IMM:
+			return 2;
+			
+		/** 0xAA */
+		case TAX:
 			return 2;
 
 		default:

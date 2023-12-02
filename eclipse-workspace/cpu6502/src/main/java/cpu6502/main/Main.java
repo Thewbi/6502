@@ -72,7 +72,7 @@ public class Main {
 //		// CLC    - clear the carry flag (0 -> C)
 //		codeSegment[idx++] = (byte) 0x18;
 //
-//		// LDA #3 - load a with 1
+//		// LDA #1 - load a with 1
 //		codeSegment[idx++] = (byte) 0xA9; // 
 //		codeSegment[idx++] = (byte) 0x01; // 1
 //		
@@ -110,14 +110,42 @@ public class Main {
 		// a9 05 8d 01 02 
 		// a9 08 8d 02 02
 		
-		// LDA #3 - load a with 1
-		codeSegment[idx++] = (byte) 0xA9; // LDA_IMM
-		codeSegment[idx++] = (byte) 0x0A; // 10dec = 0x0A
+//		// LDA #3 - load a with 1
+//		codeSegment[idx++] = (byte) 0xA9; // LDA_IMM
+//		codeSegment[idx++] = (byte) 0x0A; // 10dec = 0x0A
+//		
+//		// STA $0200
+//		codeSegment[idx++] = (byte) 0x8d; // STA
+//		codeSegment[idx++] = (byte) 0x12; // 00
+//		codeSegment[idx++] = (byte) 0x34; // 02
 		
-		// STA $0200
-		codeSegment[idx++] = (byte) 0x8d; // STA
-		codeSegment[idx++] = (byte) 0x12; // 00
-		codeSegment[idx++] = (byte) 0x34; // 02
+		// Snippet
+		// 
+		// LDA #$c0  ; Load the hex value $c0 into the A register
+		// TAX       ; Transfer the value in the A register to X
+		// INX       ; Increment the value in the X register
+		// ADC #$c4  ; Add the hex value $c4 to the A register
+		// BRK       ; Break - we're done
+		//
+		// a9 c0 	// LDA #$c0
+		// aa       // TAX - Transfer Accumulator To Index X
+		// e8 		// INX - Increment Index Register X By One
+		// 69 c4 	// ADC #$C4
+		// 00 		// BRK
+		
+		// LDA #0xC0 - load a with 0xC0
+		codeSegment[idx++] = (byte) 0xA9; // LDA_IMM
+		codeSegment[idx++] = (byte) 0xc0; // 0xC0
+		
+		// TAX
+		codeSegment[idx++] = (byte) 0xaa;
+		
+		// INX
+		codeSegment[idx++] = (byte) 0xe8;
+		
+		// ADC 0xc4
+		codeSegment[idx++] = (byte) 0x69;
+		codeSegment[idx++] = (byte) 0xc4;
 
 		//
 		// Components
@@ -146,6 +174,7 @@ public class Main {
 
 		// start the next instruction
 		cpu.execute = Instructions.fromValue(cpu.ir);
+		
 
 		boolean pcIncrement = true;
 
@@ -164,11 +193,31 @@ public class Main {
 
 			// run ALU logic, read inputs, compute output
 			alu.sums = cpu.SUMS;
-			alu.aInputRegister = 0;
-			if (cpu.DBADD) {
+//			alu.aInputRegister = 0;
+			if (cpu.DAA)
+			{
+				alu.aInputRegister = cpu.sb;
+				cpu.DAA = false;
+			}
+//			alu.bInputRegister = 0;
+			if (cpu.ACDB)
+			{
+				cpu.databus = cpu.a;
+			}
+			if (!cpu.nDBADD && cpu.DBADD) {
 				alu.bInputRegister = cpu.databus;
 			}
-			alu.compute(cpu.a);
+			//alu.compute(cpu.a, cpu.carry ? 1 : 0);
+//			if (cpu.ACDB)
+//			{
+//				alu.compute(cpu.a, cpu.carry ? 1 : 0);
+//			} 
+//			else 
+//			{
+//				alu.compute(0, cpu.carry ? 1 : 0);
+//			}
+			alu.compute(cpu.carry ? 1 : 0);
+//			cpu.carryIn = 0;
 
 			// output the value from the adder hold register onto the sbus
 			if (cpu.ADDSB7 && cpu.ADDSB06) {
@@ -236,12 +285,15 @@ public class Main {
 
 				cpu.fetch = codeSegment[cpu.pc];
 
-				if (cpu.execute == Instructions.LDX_IMM) {
+				if ((cpu.execute == Instructions.LDX_IMM) || (cpu.execute == Instructions.TAX) 
+						|| (cpu.execute == Instructions.INX) /*|| (cpu.execute == Instructions.ADC_IMM)*/) {
 					// activate input to the X-Register
 					cpu.SBX = true;
 					if (cpu.SBX) {
 						// read current value from SB which is computed by the ALU
 						cpu.x = cpu.sb;
+						
+						cpu.SBX = false;
 					}
 				}
 				if (cpu.execute == Instructions.LDY_IMM) {
@@ -250,6 +302,8 @@ public class Main {
 					if (cpu.SBY) {
 						// read current value from SB which is computed by the ALU
 						cpu.y = cpu.sb;
+						
+						cpu.SBY = false;
 					}
 				}
 				if (cpu.execute == Instructions.LDA_IMM) {
@@ -259,7 +313,11 @@ public class Main {
 					if (cpu.SBAC) {
 						// read current value from SB
 						cpu.a = cpu.sb;
+						
+						cpu.SBAC = false;
 					}
+					
+					cpu.DAA = true;
 				}
 				
 				if (cpu.ADL_ABL) {
@@ -269,6 +327,17 @@ public class Main {
 				if (cpu.ADH_ABH) {
 					// load address bus high register to store a memory address
 					cpu.abh = cpu.databus;
+				}
+				
+				if (cpu.execute == Instructions.INX) {
+					cpu.DBADD = false;
+					cpu.nDBADD = true;
+					
+					cpu.ADDSB06 = true;
+					cpu.ADDSB7 = true;
+					alu.bInputRegister = 0;
+//					cpu.carryIn = 1;
+					cpu.carry = true;
 				}
 
 				cpu.ir = cpu.databus;
@@ -311,10 +380,12 @@ public class Main {
 
 				// reset PLA signals
 				cpu.SUMS = false;
+				cpu.DBADD = false;
+				cpu.nDBADD = true;
 
 			} else if (rcl.state == RandomControlLogicState.T2) {
 
-				executeT2(cpu);
+				executeT2(cpu, alu);
 				
 				//
 				// output state (before reseting the signals)
@@ -333,7 +404,7 @@ public class Main {
 			} 
 			else if (rcl.state == RandomControlLogicState.T0_T2)
 			{
-				executeT2(cpu);
+				executeT2(cpu, alu);
 				
 				// Every instruction has at least two cycles. For one byte instructions, a single
 				// pc increment and a single fetch suffices. A PC increment or fetching the next
@@ -345,9 +416,12 @@ public class Main {
 				// and the next byte was fetched, then the CPU would point onto an instruction which
 				// is not executed in the current cycle and the internal state is incorrect!
 				if ((cpu.execute == Instructions.SEC) || (cpu.execute == Instructions.CLC)
-						|| (cpu.execute == Instructions.SEI) || (cpu.execute == Instructions.CLI)) {
+						|| (cpu.execute == Instructions.SEI) || (cpu.execute == Instructions.CLI)
+						|| (cpu.execute == Instructions.INX) || (cpu.execute == Instructions.TAX)) {
 					pcIncrement = false;
 				}
+				
+				
 				
 				//
 				// output state
@@ -379,6 +453,8 @@ public class Main {
 //					// load address bus high register to store a memory address
 //					cpu.abh = cpu.oldDatabus;
 //				}
+				
+				
 				
 				//
 				// output state
@@ -478,16 +554,29 @@ public class Main {
 
 	}
 
-	private static void executeT2(Cpu cpu) {
+	private static void executeT2(Cpu cpu, ArithmeticLogicUnit alu) {
 		
-		if (cpu.execute == Instructions.ADC_IMM) {
-			// activate input to the AC-Register
-			cpu.SBAC = true;
-			if (cpu.SBAC) {
-				// read current value from SB
-				cpu.a = cpu.sb;
-			}
-		}
+		
+		
+					
+					
+		
+		Instructions oldExecute = cpu.execute;
+//		if (oldExecute == Instructions.ADC_IMM) {
+//			// activate input to the AC-Register
+//			cpu.SBAC = true;
+//			if (cpu.SBAC) {
+//				// read current value from SB
+//				cpu.a = cpu.sb;
+//			}
+//			// activate input to the X-Register
+//			cpu.SBX = true;
+//			if (cpu.SBX) {
+//				// read current value from SB which is computed by the ALU
+//				cpu.x = cpu.sb;
+//			}
+//		}
+		
 			
 		cpu.fetch = (byte) 0xFF;
 
@@ -498,6 +587,8 @@ public class Main {
 			// latch data into the address bus registers so the CPU learns about an address (for potential memory access)
 //			cpu.ADL_ABL = true;
 //			cpu.ADH_ABH = true;
+			cpu.SBAC = true;
+			cpu.DBADD = true;
 		}
 		if (cpu.execute == Instructions.LDX_IMM) {
 			// activate the inputs of the ALU but do not compute the ALU yet
@@ -507,6 +598,8 @@ public class Main {
 			cpu.ADDSB06 = true;
 			cpu.SUMS = true;
 			cpu.DBADD = true;
+			cpu.nDBADD = false;
+			cpu.SBX = true;
 		}
 		if (cpu.execute == Instructions.LDY_IMM) {
 			// activate the inputs of the ALU but do not compute the ALU yet!
@@ -516,6 +609,8 @@ public class Main {
 			cpu.ADDSB06 = true;
 			cpu.SUMS = true;
 			cpu.DBADD = true;
+			cpu.nDBADD = false;
+			cpu.SBX = true;
 		}
 		if (cpu.execute == Instructions.LDA_IMM) {
 			// activate the inputs of the ALU but do not compute the ALU yet!
@@ -525,6 +620,8 @@ public class Main {
 			cpu.ADDSB06 = true;
 			cpu.SUMS = true;
 			cpu.DBADD = true;
+			cpu.nDBADD = false;
+			
 			// latch data into the address bus registers so the CPU learns about an address (for potential memory access)
 //			cpu.ADL_ABL = true;
 //			cpu.ADH_ABH = true;
@@ -535,6 +632,8 @@ public class Main {
 			cpu.ADDSB06 = true;
 			cpu.SUMS = true;
 			cpu.DBADD = true;
+			cpu.nDBADD = false;
+			cpu.SBX = true;
 		}
 		if (cpu.execute == Instructions.SEC) {
 			// the cpu status register will set the carry flag to the value of bit 5 of the
@@ -556,6 +655,56 @@ public class Main {
 			// ir
 			cpu.ir5I = true;
 		}
+		if (cpu.execute == Instructions.INX) {
+			
+			// prevent loading the bAccumulatorRegister with a bus value!
+			cpu.DBADD = false;
+			cpu.nDBADD = true;
+			
+			// activate the inputs of the ALU but do not compute the ALU yet!
+			// Computing and further processing of the result is done in cycle T1 where
+			// the SBX, SBY signals are set to latch the value into the correct target registers.
+			cpu.ADDSB7 = false;
+			cpu.ADDSB06 = false;
+			
+			// maybe, the PLA-Signal T+-inx is directly connected to the ALU-carry in port and
+			// can be used by the PLA to place a 1 into the carry bit of the ALU to implement incrementing instructions
+			// such as INX
+//			cpu.carryIn = 1;
+			cpu.carry = true;
+			cpu.ir5C = true;
+			
+			alu.bInputRegister = 0;
+			
+			cpu.SUMS = true;
+		}
+		
+		
+		// output the value from the adder hold register onto the sbus
+		if (cpu.ADDSB7 && cpu.ADDSB06) {
+			cpu.sb = alu.adderHoldRegister;
+		}
+		
+		if ((cpu.execute == Instructions.LDX_IMM) || (cpu.execute == Instructions.LDY_IMM) 
+				|| (cpu.execute == Instructions.LDA_IMM) || (cpu.execute == Instructions.ADC_IMM) || (cpu.execute == Instructions.BRK)) {
+			// activate input to the AC-Register
+//			cpu.SBAC = true;
+			if (cpu.SBAC) {
+				// read current value from SB and store it into the accumulator
+				cpu.a = cpu.sb;
+				
+				cpu.SBAC = false;
+			}
+			// activate input to the X-Register
+//			cpu.SBX = true;
+			if (cpu.SBX) {
+				// read current value from SB which is computed by the ALU
+				cpu.x = cpu.sb;
+				
+				cpu.SBX = false;
+			}
+		}
+		
 	}
 
 	private static void dump(int cycle, RandomControlLogic rcl, Cpu cpu) {

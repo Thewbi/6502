@@ -13,7 +13,7 @@ public class Cpu {
 	public int y;
 	
 	/** the AC register */
-	public int a;
+	public int a = 0xaa; // why this initial value??? It is copied from Visual6502
 
 	/** instruction register */
 	public int ir;
@@ -80,7 +80,7 @@ public class Cpu {
 	public int oldDatabus;
 	
 	/** sbus ??? */
-	public int sb;
+	public int sb = 0xFF; // initial value from visual 6502
 	
 	/** adder hold register will output to SB
 	 */
@@ -94,6 +94,11 @@ public class Cpu {
 	/** input to the ALU b input register, when DBADD is true, the ALU b input register will latch the databus (See Dr. Hansons Diagram)
 	 */
 	public boolean DBADD;
+	public boolean nDBADD;
+	
+	/** connects the Accumulator to the databus. It this signal is set, the the content of the AC register are available on the
+	 * databus */ 
+	public boolean ACDB;
 	
 	/** SEC - set carry and Clear Carry. For set carry, the random control logic will set the IR5/C signal
 	 The status register will read this signal and set the carry flag
@@ -119,6 +124,9 @@ public class Cpu {
 	the address bus registers (ABL and ABH) so that the CPU learns which memory cell to access
 	*/
 	public boolean ADH_ABH;
+	public boolean DAA;
+	
+	//public int carryIn;
 	
 
 	public void reset() {
@@ -126,7 +134,7 @@ public class Cpu {
 		y = 0;
 		
 		// the Accumulator (AC) register
-		a = 0;
+		a = 0xaa; // why this initial value??? It is copied from Visual6502
 
 		// instruction register
 		ir = 0;
@@ -209,6 +217,8 @@ public class Cpu {
 		
 		DBADD = false;
 		
+		ACDB = false;
+		
 		ir5C = false;
 		ir5I = false;
 		
@@ -220,15 +230,20 @@ public class Cpu {
 		
 		PCL_ADL = true;
 		PCH_ADH = true;
+		
+		sb = 0xFF; // initial value from visual 6502
+		
+		DAA = false;
 	}
 
 	public void dump() {
 		System.out.print(" db:" + String.format("%1$02X", (databus & 0xFF)));
+		System.out.print(" sb:" + String.format("%1$02X", (sb & 0xFF)));
 		System.out.print(" Fetch:" + String.format("%1$-6s", Instructions.getNameWithEmptyOption(fetch)));
 		System.out.print(" pc:" + String.format("%1$-4s", pc));
-		System.out.print(" a:" + Integer.toString(a, 16));
-		System.out.print(" x:" + Integer.toString(x, 16));
-		System.out.print(" y:" + Integer.toString(y, 16));
+		System.out.print(" a:" + String.format("%1$02X", (a & 0xFF)));
+		System.out.print(" x:" + String.format("%1$02X", (x & 0xFF)));
+		System.out.print(" y:" + String.format("%1$02X", (y & 0xFF)));
 		// address bus registers (!= adl = address line registers)
 		System.out.print(" abl:" + String.format("%1$02X", (abl & 0xFF)));
 		System.out.print(" abh:" + String.format("%1$02X", (abh & 0xFF)));
@@ -248,7 +263,7 @@ public class Cpu {
 		
 		System.out.print(String.format("%1$-20s", (" PLA: " + (SUMS ? "SUMS" : ""))));
 		
-		System.out.print(" DPCtrl: " + (PCL_ADL ? "PCL_ADL " : "") + (PCH_ADH ? "PCH_ADH " : "") + (ADL_ABL ? "ADL_ABL " : "") + (ADH_ABH ? "ADH_ABH " : "") + (SBX ? "SBX " : "") + (SBY ? "SBY" : "") + (SBAC ? "SBAC" : ""));
+		System.out.print(" DPCtrl: " + (ADDSB7 ? "ADDSB7 " : "") + (ADDSB06 ? "ADDSB06 " : "") + (PCL_ADL ? "PCL_ADL " : "") + (PCH_ADH ? "PCH_ADH " : "") + (ADL_ABL ? "ADL_ABL " : "") + (ADH_ABH ? "ADH_ABH " : "") + (SBX ? "SBX " : "") + (SBY ? "SBY" : "") + (SBAC ? "SBAC" : ""));
 	}
 
 }
